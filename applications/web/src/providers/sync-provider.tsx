@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { useSetAtom } from "jotai";
 import { syncStateAtom, type CompositeSyncState } from "@/state/sync";
+import { notifyEventsChanged } from "@/lib/events-changed";
 import {
+  hasSyncLandedEvents,
   parseIncomingSocketAction,
   resolveAggregateLastSyncedAt,
   shouldAcceptAggregatePayload,
@@ -145,6 +147,10 @@ const handleMessage = (
   connectionState.hasReceivedSocketAggregate = true;
   clearInitialAggregateTimer(connectionState);
   connectionState.lastSeq = decision.nextSeq;
+
+  if (hasSyncLandedEvents(connectionState.currentState, action.data)) {
+    notifyEventsChanged();
+  }
 
   const lastSyncedAt = resolveAggregateLastSyncedAt(
     connectionState.currentState.lastSyncedAt,

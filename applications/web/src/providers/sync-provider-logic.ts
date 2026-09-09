@@ -31,17 +31,24 @@ const parseTimestampMs = (value: string | null | undefined): number | null => {
   return Number.isFinite(timestamp) ? timestamp : null;
 };
 
-const isForwardProgress = (
+const hasLastSyncedAtAdvanced = (
   current: CompositeSyncState,
   next: SyncAggregateData,
 ): boolean => {
   const currentLastSyncedAtMs = parseTimestampMs(current.lastSyncedAt);
   const nextLastSyncedAtMs = parseTimestampMs(next.lastSyncedAt);
 
-  if (
+  return (
     nextLastSyncedAtMs !== null &&
     (currentLastSyncedAtMs === null || nextLastSyncedAtMs > currentLastSyncedAtMs)
-  ) {
+  );
+};
+
+const isForwardProgress = (
+  current: CompositeSyncState,
+  next: SyncAggregateData,
+): boolean => {
+  if (hasLastSyncedAtAdvanced(current, next)) {
     return true;
   }
 
@@ -63,6 +70,14 @@ const isForwardProgress = (
 
   return false;
 };
+
+/** The first aggregate of a page load is skipped: the readers just fetched on mount. */
+const hasSyncLandedEvents = (
+  current: CompositeSyncState,
+  next: SyncAggregateData,
+): boolean =>
+  current.hasReceivedAggregate &&
+  (hasLastSyncedAtAdvanced(current, next) || (current.state === "syncing" && !next.syncing));
 
 const parseIncomingSocketAction = (
   raw: string,
@@ -117,6 +132,7 @@ const shouldAcceptAggregatePayload = (
 };
 
 export {
+  hasSyncLandedEvents,
   parseIncomingSocketAction,
   resolveAggregateLastSyncedAt,
   shouldAcceptAggregatePayload,

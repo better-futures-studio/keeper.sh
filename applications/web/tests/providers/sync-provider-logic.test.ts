@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CompositeSyncState, SyncAggregateData } from "@/state/sync";
 import {
+  hasSyncLandedEvents,
   parseIncomingSocketAction,
   resolveAggregateLastSyncedAt,
   shouldAcceptAggregatePayload,
@@ -226,5 +227,39 @@ describe("resolveAggregateLastSyncedAt", () => {
       "2026-03-08T12:00:00.000Z",
       createAggregate({ lastSyncedAt: null }),
     )).toBeNull();
+  });
+});
+
+describe("hasSyncLandedEvents", () => {
+  it("ignores the first aggregate of a page load", () => {
+    expect(hasSyncLandedEvents(
+      createCurrentState({ hasReceivedAggregate: false, lastSyncedAt: null, state: "idle" }),
+      createAggregate({ syncing: false }),
+    )).toBe(false);
+  });
+
+  it("fires when a calendar finishes and lastSyncedAt advances", () => {
+    expect(hasSyncLandedEvents(createCurrentState(), createAggregate())).toBe(true);
+  });
+
+  it("fires when syncing ends without a timestamp", () => {
+    const next = createAggregate({ syncing: false });
+    Reflect.deleteProperty(next, "lastSyncedAt");
+
+    expect(hasSyncLandedEvents(createCurrentState(), next)).toBe(true);
+  });
+
+  it("stays quiet on progress-only updates", () => {
+    expect(hasSyncLandedEvents(
+      createCurrentState(),
+      createAggregate({ lastSyncedAt: "2026-03-08T12:00:00.000Z" }),
+    )).toBe(false);
+  });
+
+  it("stays quiet when a reconnect replays the same idle aggregate", () => {
+    expect(hasSyncLandedEvents(
+      createCurrentState({ state: "idle", progressPercent: 100, syncEventsRemaining: 0 }),
+      createAggregate({ lastSyncedAt: "2026-03-08T12:00:00.000Z", syncing: false }),
+    )).toBe(false);
   });
 });
