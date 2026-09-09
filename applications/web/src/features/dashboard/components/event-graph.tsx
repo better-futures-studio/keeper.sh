@@ -15,6 +15,7 @@ import {
 import { resolveDataAttr } from "@/utils/data-attr";
 import { fetcher } from "@/lib/fetcher";
 import { useAnimatedSWR } from "@/hooks/use-animated-swr";
+import { useOnEventsChanged } from "@/hooks/use-on-events-changed";
 import { pluralize } from "@/lib/pluralize";
 import { Text } from "@/components/ui/primitives/text";
 import { useStartOfToday } from "@/hooks/use-start-of-today";
@@ -323,7 +324,8 @@ function EventGraphBars({ days, shouldAnimate }: EventGraphBarsProps) {
 export function EventGraph() {
   const todayStart = useStartOfToday();
   const graphUrl = buildGraphUrl(todayStart);
-  const { data: events, shouldAnimate } = useAnimatedSWR<ApiEventSummary[]>(graphUrl, { fetcher });
+  const { data: events, shouldAnimate, mutate } = useAnimatedSWR<ApiEventSummary[]>(graphUrl, { fetcher });
+  useOnEventsChanged(mutate);
   const days = buildDays(events ?? [], todayStart);
 
   return (

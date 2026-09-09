@@ -20,6 +20,7 @@ import { apiFetch, fetcher } from "@/lib/fetcher";
 import { invalidateAccountsAndSources } from "@/lib/swr";
 import { resolveErrorMessage } from "@/utils/errors";
 import { useCountdown } from "@/hooks/use-countdown";
+import { useOnEventsChanged } from "@/hooks/use-on-events-changed";
 import {
   formatRefreshFailures,
   formatRefreshSummary,
@@ -239,7 +240,8 @@ function CalendarsMenu() {
   const { data: calendarsData, shouldAnimate: animateCalendars, isLoading: calendarsLoading, error, mutate: mutateCalendars } = useAnimatedSWR<CalendarSource[]>("/api/sources");
   const calendars = calendarsData ?? [];
 
-  const { data: eventCountData, error: eventCountError } = useSWR<{ count: number }>("/api/events/count");
+  const { data: eventCountData, error: eventCountError, mutate: mutateEventCount } = useSWR<{ count: number }>("/api/events/count");
+  useOnEventsChanged(mutateEventCount);
   const eventCount = eventCountError ? undefined : eventCountData?.count;
 
   return (
