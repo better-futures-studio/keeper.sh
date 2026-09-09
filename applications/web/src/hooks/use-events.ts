@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import { fetcher } from "@/lib/fetcher";
@@ -71,6 +72,11 @@ export function useEvents() {
   );
   // SWR's filter mutate skips infinite keys, so the list refetches through its own bound mutate.
   useOnEventsChanged(mutate);
+  // Plain SWR revalidates a cached key on mount; the infinite hook never refetches loaded pages, so do it here.
+  const mountedWithCache = useRef(data !== undefined);
+  useEffect(() => {
+    if (mountedWithCache.current) void mutate();
+  }, [mutate]);
 
   const events = resolveEvents(data);
   const hasMore = !data || (data[data.length - 1]?.length ?? 0) > 0;
