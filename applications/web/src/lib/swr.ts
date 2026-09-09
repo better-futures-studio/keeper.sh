@@ -1,13 +1,12 @@
 import type { ScopedMutator } from "swr";
+import { notifyEventsChanged } from "./events-changed";
 
-/**
- * Revalidate all account and source caches.
- * Use after creating, updating, or deleting accounts/sources.
- */
-export function invalidateAccountsAndSources(
+/** Revalidate accounts, sources, and every mounted events reader; use after any account or source change. */
+export function invalidateCalendarData(
   globalMutate: ScopedMutator,
   ...additionalKeys: string[]
 ) {
+  notifyEventsChanged();
   return Promise.all([
     globalMutate("/api/accounts"),
     globalMutate("/api/sources"),

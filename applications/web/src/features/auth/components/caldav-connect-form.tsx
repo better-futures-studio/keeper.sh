@@ -8,7 +8,7 @@ import { Divider } from "@/components/ui/primitives/divider";
 import { Input } from "@/components/ui/primitives/input";
 import { Text } from "@/components/ui/primitives/text";
 import { apiFetch } from "@/lib/fetcher";
-import { invalidateAccountsAndSources } from "@/lib/swr";
+import { invalidateCalendarData } from "@/lib/swr";
 import { resolveErrorMessage } from "@/utils/errors";
 
 export type CalDAVProvider = "fastmail" | "icloud" | "caldav";
@@ -168,7 +168,7 @@ export function CalDAVConnectForm({ provider }: CalDAVConnectFormProps) {
         return;
       }
 
-      await invalidateAccountsAndSources(globalMutate);
+      await invalidateCalendarData(globalMutate);
 
       if (accountId) {
         navigate({ to: "/dashboard/accounts/$accountId/setup", params: { accountId } });

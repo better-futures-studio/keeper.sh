@@ -17,7 +17,7 @@ import { DashboardHeading1, DashboardSection } from "@/components/ui/primitives/
 import { apiFetch, fetcher } from "@/lib/fetcher";
 import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { serializedPatch, serializedCall } from "@/lib/serialized-mutate";
-import { invalidateAccountsAndSources } from "@/lib/swr";
+import { invalidateCalendarData } from "@/lib/swr";
 import { formatDate } from "@/lib/time";
 import { resolveErrorMessage } from "@/utils/errors";
 import { canPull, canPush } from "@/utils/calendars";
@@ -424,7 +424,7 @@ function DeleteCalendarSection({ accountId, calendarId }: { accountId: string; c
       try {
         await apiFetch(`/api/sources/${calendarId}`, { method: "DELETE" });
         track(ANALYTICS_EVENTS.source_calendar_deleted);
-        await invalidateAccountsAndSources(globalMutate, `/api/accounts/${accountId}`);
+        await invalidateCalendarData(globalMutate, `/api/accounts/${accountId}`);
         navigate({ to: `/dashboard/accounts/${accountId}` });
       } catch (err) {
         setDeleteError(resolveErrorMessage(err, "Failed to delete calendar."));

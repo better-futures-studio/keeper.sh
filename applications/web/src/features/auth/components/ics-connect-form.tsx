@@ -3,7 +3,7 @@ import LoaderCircle from "lucide-react/dist/esm/icons/loader-circle";
 import { useNavigate } from "@tanstack/react-router";
 import { useSWRConfig } from "swr";
 import { apiFetch } from "@/lib/fetcher";
-import { invalidateAccountsAndSources } from "@/lib/swr";
+import { invalidateCalendarData } from "@/lib/swr";
 import { BackButton } from "@/components/ui/primitives/back-button";
 import { Button, ButtonText } from "@/components/ui/primitives/button";
 import { Checkbox } from "@/components/ui/primitives/checkbox";
@@ -71,7 +71,7 @@ export function ICSFeedForm() {
         return;
       }
 
-      await invalidateAccountsAndSources(globalMutate);
+      await invalidateCalendarData(globalMutate);
 
       if (accountId) {
         navigate({ to: "/dashboard/accounts/$accountId/setup", params: { accountId } });

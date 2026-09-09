@@ -17,7 +17,7 @@ import { ErrorState } from "@/components/ui/primitives/error-state";
 import { signOut } from "@/lib/auth";
 import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { apiFetch, fetcher } from "@/lib/fetcher";
-import { invalidateAccountsAndSources } from "@/lib/swr";
+import { invalidateCalendarData } from "@/lib/swr";
 import { resolveErrorMessage } from "@/utils/errors";
 import { useCountdown } from "@/hooks/use-countdown";
 import { useOnEventsChanged } from "@/hooks/use-on-events-changed";
@@ -187,7 +187,7 @@ function CalendarSourcesMenu() {
         const response = await apiFetch("/api/accounts/refresh-calendars", { method: "POST" });
         const result = refreshCalendarsResponseSchema.assert(await response.json());
         track(ANALYTICS_EVENTS.calendars_refreshed, { accounts: result.accounts });
-        await invalidateAccountsAndSources(globalMutate);
+        await invalidateCalendarData(globalMutate);
         startCooldown(result.cooldownSeconds);
 
         const failures = formatRefreshFailures(result.failed);
