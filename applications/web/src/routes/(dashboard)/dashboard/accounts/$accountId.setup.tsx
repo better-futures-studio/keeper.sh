@@ -6,6 +6,7 @@ import { UpgradeHint } from "@/components/ui/primitives/upgrade-hint";
 import { DashboardSection } from "@/components/ui/primitives/dashboard-heading";
 import { Button, LinkButton, ButtonText } from "@/components/ui/primitives/button";
 import { apiFetch } from "@/lib/fetcher";
+import { bumpEventsVersion } from "@/state/events";
 import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { useEntitlements, useMutateEntitlements, canAddMore } from "@/hooks/use-entitlements";
 import type { CalendarSource } from "@/types/api";
@@ -413,6 +414,7 @@ function RenameSection({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name }),
         });
+        bumpEventsVersion();
         return current?.map((calendar) =>
           calendar.id === calendarId ? { ...calendar, name } : calendar,
         );

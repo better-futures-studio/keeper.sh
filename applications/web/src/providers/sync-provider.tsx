@@ -1,9 +1,8 @@
 import { useEffect } from "react";
 import { useSetAtom } from "jotai";
 import { syncStateAtom, type CompositeSyncState } from "@/state/sync";
-import { notifyEventsChanged } from "@/lib/events-changed";
+import { bumpEventsVersion } from "@/state/events";
 import {
-  hasSyncLandedEvents,
   parseIncomingSocketAction,
   resolveAggregateLastSyncedAt,
   shouldAcceptAggregatePayload,
@@ -135,6 +134,11 @@ const handleMessage = (
     return;
   }
 
+  if (action.kind === "events-changed") {
+    bumpEventsVersion();
+    return;
+  }
+
   const decision = shouldAcceptAggregatePayload(
     connectionState.currentState,
     connectionState.lastSeq,
@@ -147,10 +151,6 @@ const handleMessage = (
   connectionState.hasReceivedSocketAggregate = true;
   clearInitialAggregateTimer(connectionState);
   connectionState.lastSeq = decision.nextSeq;
-
-  if (hasSyncLandedEvents(connectionState.currentState, action.data)) {
-    notifyEventsChanged();
-  }
 
   const lastSyncedAt = resolveAggregateLastSyncedAt(
     connectionState.currentState.lastSyncedAt,
@@ -200,6 +200,7 @@ const connect = async (
     connectionState.socket = socket;
 
     socket.addEventListener("open", () => {
+      if (connectionState.attempts > 0) bumpEventsVersion();
       connectionState.attempts = 0;
       connectionState.lastSeq = -1;
       connectionState.hasReceivedSocketAggregate = false;

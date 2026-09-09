@@ -17,7 +17,8 @@ import { DashboardHeading1, DashboardSection } from "@/components/ui/primitives/
 import { apiFetch, fetcher } from "@/lib/fetcher";
 import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { serializedPatch, serializedCall } from "@/lib/serialized-mutate";
-import { invalidateCalendarData } from "@/lib/swr";
+import { invalidateAccountsAndSources } from "@/lib/swr";
+import { bumpEventsVersion } from "@/state/events";
 import { formatDate } from "@/lib/time";
 import { resolveErrorMessage } from "@/utils/errors";
 import { canPull, canPush } from "@/utils/calendars";
@@ -110,12 +111,14 @@ function patchSource(
   serializedPatch(
     swrKey,
     patch,
-    (mergedPatch) => {
-      return apiFetch(swrKey, {
+    async (mergedPatch) => {
+      const response = await apiFetch(swrKey, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(mergedPatch),
       });
+      if ("name" in mergedPatch) bumpEventsVersion();
+      return response;
     },
     () => {
       fetcher<CalendarDetail>(swrKey).then((serverState) => {
@@ -424,7 +427,8 @@ function DeleteCalendarSection({ accountId, calendarId }: { accountId: string; c
       try {
         await apiFetch(`/api/sources/${calendarId}`, { method: "DELETE" });
         track(ANALYTICS_EVENTS.source_calendar_deleted);
-        await invalidateCalendarData(globalMutate, `/api/accounts/${accountId}`);
+        await invalidateAccountsAndSources(globalMutate, `/api/accounts/${accountId}`);
+        bumpEventsVersion();
         navigate({ to: `/dashboard/accounts/${accountId}` });
       } catch (err) {
         setDeleteError(resolveErrorMessage(err, "Failed to delete calendar."));

@@ -1,9 +1,7 @@
-import { useEffect, useRef } from "react";
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import { fetcher } from "@/lib/fetcher";
 import { useStartOfToday } from "./use-start-of-today";
-import { useOnEventsChanged } from "./use-on-events-changed";
 import type { ApiEvent } from "@/types/api";
 
 export interface CalendarEvent {
@@ -65,18 +63,11 @@ export function useEvents() {
     return buildEventsUrl(from, to);
   };
 
-  const { data, error, setSize, isLoading, isValidating, mutate } = useSWRInfinite(
+  const { data, error, setSize, isLoading, isValidating } = useSWRInfinite(
     getKey,
     fetchEvents,
-    { revalidateFirstPage: false, keepPreviousData: true },
+    { keepPreviousData: true },
   );
-  // SWR's filter mutate skips infinite keys, so the list refetches through its own bound mutate.
-  useOnEventsChanged(mutate);
-  // Plain SWR revalidates a cached key on mount; the infinite hook never refetches loaded pages, so do it here.
-  const mountedWithCache = useRef(data !== undefined);
-  useEffect(() => {
-    if (mountedWithCache.current) void mutate();
-  }, [mutate]);
 
   const events = resolveEvents(data);
   const hasMore = !data || (data[data.length - 1]?.length ?? 0) > 0;
@@ -101,10 +92,9 @@ interface EventsInRange {
 
 export function useEventsInRange(start: Date, end: Date): EventsInRange {
   const url = buildEventsUrl(start, new Date(end.getTime() - INCLUSIVE_END_MS));
-  const { data, error, isLoading, mutate } = useSWR<CalendarEvent[], Error>(url, fetchEvents, {
+  const { data, error, isLoading } = useSWR<CalendarEvent[], Error>(url, fetchEvents, {
     keepPreviousData: true,
   });
-  useOnEventsChanged(mutate);
 
   return { events: data ?? NO_EVENTS, error, isLoading };
 }

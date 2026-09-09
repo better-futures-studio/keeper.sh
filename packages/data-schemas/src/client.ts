@@ -42,4 +42,6 @@ const isSyncAggregate = (value: unknown): value is SyncAggregate => {
   );
 };
 
-export { type SocketMessage, type SyncAggregate, isSocketMessage, isSyncAggregate };
+const EVENTS_CHANGED_EVENT = "events:changed";
+
+export { type SocketMessage, type SyncAggregate, EVENTS_CHANGED_EVENT, isSocketMessage, isSyncAggregate };

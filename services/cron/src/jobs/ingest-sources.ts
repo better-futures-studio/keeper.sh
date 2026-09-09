@@ -71,6 +71,7 @@ import {
 } from "@/context";
 import env from "@/env";
 import { safeFetchOptions } from "@/utils/safe-fetch-options";
+import { notifyEventsChanged } from "@/utils/notify-events-changed";
 import {
   resolveMissingCalendarFailure,
   shouldTreatAsProviderAuthFailure,
@@ -1953,6 +1954,7 @@ export default withCronWideEvent({
       }
     }
 
+    notifyEventsChanged(affectedUserIds);
     await recordFirstIngestSyncRequests(firstIngestUserIds);
     await enqueueDestinationSyncsForUsers(affectedUserIds);
 

@@ -32,7 +32,8 @@ import {
 import { safeFetchOptions } from "./safe-fetch-options";
 
 import { spawnBackgroundJob } from "./background-task";
-import { database, premiumService, redis } from "@/context";
+import { broadcastService, database, premiumService, redis } from "@/context";
+import { EVENTS_CHANGED_EVENT } from "@keeper.sh/data-schemas/client";
 import { widelog } from "@/utils/logging";
 import { createSyncLock } from "@keeper.sh/sync";
 
@@ -236,6 +237,7 @@ const createSource = async (userId: string, name: string, url: string): Promise<
         },
         fetchAndSyncSource: async (source) => {
           await ingestIcsSource(source);
+          broadcastService.emit(input.userId, EVENTS_CHANGED_EVENT, {});
         },
         spawnBackgroundJob,
         enqueuePushSync: async (enqueuedUserId) => {

@@ -13,7 +13,8 @@ import { MetadataRow } from "@/features/dashboard/components/metadata-row";
 import { fetcher, apiFetch } from "@/lib/fetcher";
 import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { formatDate } from "@/lib/time";
-import { invalidateCalendarData } from "@/lib/swr";
+import { invalidateAccountsAndSources } from "@/lib/swr";
+import { bumpEventsVersion } from "@/state/events";
 import type { CalendarAccount, CalendarSource } from "@/types/api";
 import {
   NavigationMenu,
@@ -85,7 +86,7 @@ function RefreshCalendarsItem({ accountId }: { accountId: string }) {
           + `${pluralize(body.missing, "calendar")} not found at the provider, `
           + `${pluralize(body.restored, "calendar")} back.`,
         );
-        await invalidateCalendarData(globalMutate, `/api/accounts/${accountId}`);
+        await invalidateAccountsAndSources(globalMutate, `/api/accounts/${accountId}`);
       } catch (err) {
         setRefreshError(resolveErrorMessage(err, "Failed to refresh calendars."));
       }
@@ -130,7 +131,8 @@ function AccountDetailPage() {
         if (account) {
           track(ANALYTICS_EVENTS.calendar_account_deleted, { provider: account.provider });
         }
-        await invalidateCalendarData(globalMutate, `/api/accounts/${accountId}`);
+        await invalidateAccountsAndSources(globalMutate, `/api/accounts/${accountId}`);
+        bumpEventsVersion();
         navigate({ to: "/dashboard" });
       } catch (err) {
         setDeleteError(resolveErrorMessage(err, "Failed to delete account."));
@@ -139,7 +141,7 @@ function AccountDetailPage() {
   };
 
   if (error || isLoading || !account) {
-    if (error) return <RouteShell status="error" onRetry={async () => { await invalidateCalendarData(globalMutate, `/api/accounts/${accountId}`); }} />;
+    if (error) return <RouteShell status="error" onRetry={async () => { await invalidateAccountsAndSources(globalMutate, `/api/accounts/${accountId}`); }} />;
     return <RouteShell status="loading" />;
   }
 

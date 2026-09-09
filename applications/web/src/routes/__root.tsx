@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/primitives/text";
 import { LinkButton, ButtonText } from "@/components/ui/primitives/button";
 import { NotFoundState } from "@/components/ui/shells/not-found";
 import { fetcher, HttpError } from "@/lib/fetcher";
+import { revalidateEventsOnChange } from "@/lib/swr";
 import { resolveErrorMessage } from "@/utils/errors";
 import type { AppRouterContext, ViteScript } from "@/lib/router-context";
 import { serializePublicRuntimeConfig } from "@/lib/runtime-config";
@@ -16,6 +17,7 @@ const NON_RETRYABLE_STATUSES = new Set([401, 403, 404]);
 
 const SWR_CONFIG = {
   fetcher,
+  use: [revalidateEventsOnChange],
   revalidateOnFocus: true,
   revalidateOnReconnect: true,
   dedupingInterval: 2000,

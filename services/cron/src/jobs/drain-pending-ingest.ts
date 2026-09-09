@@ -16,6 +16,7 @@ import {
 } from "@/utils/pending-ingest-release";
 import { claimMetadataWithSeededRewake } from "@/utils/scoped-drain-pending-ingest";
 import { IngestBaselineMovedAbortError } from "@/utils/ingest-baseline";
+import { notifyEventsChanged } from "@/utils/notify-events-changed";
 import {
   releaseClaimedCalendars,
   releaseClaimsOnFailure,
@@ -85,6 +86,7 @@ const createDefaultDependencies = async (): Promise<DrainPendingIngestDependenci
     ingestCalendars: async (calendarIds, correlationIdByCalendarId) => {
       const result = await ingestOAuthSources(calendarIds, correlationIdByCalendarId);
       const { abortedCalendarIds, affectedUserIds } = result;
+      notifyEventsChanged(affectedUserIds);
       if (abortedCalendarIds.length > 0 && affectedUserIds.length === 0) {
         throw new IngestBaselineMovedAbortError(abortedCalendarIds);
       }

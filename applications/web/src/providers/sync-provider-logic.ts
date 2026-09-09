@@ -1,10 +1,11 @@
-import { isSocketMessage, isSyncAggregate } from "@keeper.sh/data-schemas/client";
+import { EVENTS_CHANGED_EVENT, isSocketMessage, isSyncAggregate } from "@keeper.sh/data-schemas/client";
 import type { CompositeSyncState, SyncAggregateData } from "@/state/sync";
 
 type IncomingSocketAction =
   | { kind: "ignore" }
   | { kind: "pong" }
   | { kind: "reconnect" }
+  | { kind: "events-changed" }
   | { kind: "aggregate"; data: SyncAggregateData };
 
 interface AggregateDecision {
@@ -71,14 +72,6 @@ const isForwardProgress = (
   return false;
 };
 
-/** The first aggregate of a page load is skipped: the readers just fetched on mount. */
-const hasSyncLandedEvents = (
-  current: CompositeSyncState,
-  next: SyncAggregateData,
-): boolean =>
-  current.hasReceivedAggregate &&
-  (hasLastSyncedAtAdvanced(current, next) || (current.state === "syncing" && !next.syncing));
-
 const parseIncomingSocketAction = (
   raw: string,
 ): IncomingSocketAction => {
@@ -96,6 +89,10 @@ const parseIncomingSocketAction = (
 
   if (parsed.event === "ping") {
     return { kind: "pong" };
+  }
+
+  if (parsed.event === EVENTS_CHANGED_EVENT) {
+    return { kind: "events-changed" };
   }
 
   if (parsed.event !== "sync:aggregate") {
@@ -132,7 +129,6 @@ const shouldAcceptAggregatePayload = (
 };
 
 export {
-  hasSyncLandedEvents,
   parseIncomingSocketAction,
   resolveAggregateLastSyncedAt,
   shouldAcceptAggregatePayload,

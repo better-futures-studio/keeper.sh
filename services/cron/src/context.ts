@@ -1,6 +1,7 @@
 import { FLUSH_WRITER_CONNECTIONS } from "@/utils/flush-writer";
 import env from "./env";
 import { createFlushDrainRegistry } from "./utils/flush-drains";
+import { createBroadcastService } from "@keeper.sh/broadcast";
 import { createInFlightDrainRegistry } from "./utils/in-flight-drains";
 import { closeDatabase, createDatabase } from "@keeper.sh/database";
 import Redis from "ioredis";
@@ -76,6 +77,8 @@ const refreshLockRedis = new Redis(env.REDIS_URL, {
 
 const refreshLockStore = createRedisRefreshLockStore(refreshLockRedis);
 
+const broadcastService = createBroadcastService({ redis: refreshLockRedis });
+
 /*
  * Its own connection with no command timeout: a blocking read occupies the connection for
  * as long as it waits, so sharing one would stall every other command behind it, and a
@@ -107,6 +110,7 @@ const createPolarClient = (): Polar | null => {
 const polarClient = createPolarClient();
 
 export {
+  broadcastService,
   database,
   flushDatabase,
   flushDrainRegistry,

@@ -17,10 +17,9 @@ import { ErrorState } from "@/components/ui/primitives/error-state";
 import { signOut } from "@/lib/auth";
 import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { apiFetch, fetcher } from "@/lib/fetcher";
-import { invalidateCalendarData } from "@/lib/swr";
+import { invalidateAccountsAndSources } from "@/lib/swr";
 import { resolveErrorMessage } from "@/utils/errors";
 import { useCountdown } from "@/hooks/use-countdown";
-import { useOnEventsChanged } from "@/hooks/use-on-events-changed";
 import {
   formatRefreshFailures,
   formatRefreshSummary,
@@ -187,7 +186,7 @@ function CalendarSourcesMenu() {
         const response = await apiFetch("/api/accounts/refresh-calendars", { method: "POST" });
         const result = refreshCalendarsResponseSchema.assert(await response.json());
         track(ANALYTICS_EVENTS.calendars_refreshed, { accounts: result.accounts });
-        await invalidateCalendarData(globalMutate);
+        await invalidateAccountsAndSources(globalMutate);
         startCooldown(result.cooldownSeconds);
 
         const failures = formatRefreshFailures(result.failed);
@@ -240,8 +239,7 @@ function CalendarsMenu() {
   const { data: calendarsData, shouldAnimate: animateCalendars, isLoading: calendarsLoading, error, mutate: mutateCalendars } = useAnimatedSWR<CalendarSource[]>("/api/sources");
   const calendars = calendarsData ?? [];
 
-  const { data: eventCountData, error: eventCountError, mutate: mutateEventCount } = useSWR<{ count: number }>("/api/events/count");
-  useOnEventsChanged(mutateEventCount);
+  const { data: eventCountData, error: eventCountError } = useSWR<{ count: number }>("/api/events/count");
   const eventCount = eventCountError ? undefined : eventCountData?.count;
 
   return (
