@@ -2,7 +2,6 @@ import { withCompression } from "./compression";
 import { isApiRequest, isMcpRequest, proxyRequest } from "./proxy/http";
 import { handleInternalRoute } from "./internal-routes";
 import { hasSessionCookie } from "@/lib/session-cookie";
-import { resolveMovedPath } from "@/lib/moved-paths";
 import type { Runtime, ServerConfig } from "./types";
 
 const HTML_CACHE_TTL_MS = 60_000;
@@ -90,11 +89,6 @@ export function resolveCanonicalRedirect(requestUrl: URL): Response | null {
     pathname.length > 1 && pathname.endsWith("/")
       ? pathname.replace(/\/+$/, "") || "/"
       : pathname;
-
-  const movedPath = resolveMovedPath(trimmedPath);
-  if (movedPath) {
-    return permanentRedirect(`${movedPath}${requestUrl.search}`);
-  }
 
   if (trimmedPath !== pathname) {
     return permanentRedirect(`${trimmedPath}${requestUrl.search}`);

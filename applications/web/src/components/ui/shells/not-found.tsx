@@ -10,8 +10,8 @@ export function NotFoundState() {
       <Text size="sm" tone="muted">
         The page you're looking for doesn't exist.
       </Text>
-      <LinkButton to="/" variant="border" size="compact">
-        <ButtonText>Go home</ButtonText>
+      <LinkButton to="/login" variant="border" size="compact">
+        <ButtonText>Go to login</ButtonText>
       </LinkButton>
     </div>
   );

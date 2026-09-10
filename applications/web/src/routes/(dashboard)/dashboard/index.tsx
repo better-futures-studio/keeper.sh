@@ -74,7 +74,7 @@ function DashboardPage() {
 
   const handleLogout = async () => {
     await signOut();
-    navigate({ to: "/" });
+    navigate({ to: "/login" });
   };
 
   return (

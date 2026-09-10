@@ -2,10 +2,30 @@ import { describe, expect, it } from "vitest";
 import {
   resolveAuthRedirect,
   resolveDashboardRedirect,
+  resolveRootRedirect,
   resolveUpgradeRedirect,
 } from "../../src/lib/route-access-guards";
 
 describe("route access guards", () => {
+  describe("resolveRootRedirect", () => {
+    const cases = [
+      {
+        expectedRedirect: "/login",
+        hasSession: false,
+      },
+      {
+        expectedRedirect: "/dashboard",
+        hasSession: true,
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      it(`returns ${testCase.expectedRedirect} when hasSession=${testCase.hasSession}`, () => {
+        expect(resolveRootRedirect(testCase.hasSession)).toBe(testCase.expectedRedirect);
+      });
+    }
+  });
+
   describe("resolveDashboardRedirect", () => {
     const cases = [
       {

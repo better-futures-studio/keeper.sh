@@ -2,6 +2,10 @@ export type RedirectTarget = "/dashboard" | "/login";
 
 export type SubscriptionPlan = "free" | "pro";
 
+export const resolveRootRedirect = (hasSession: boolean): RedirectTarget => {
+  return hasSession ? "/dashboard" : "/login";
+};
+
 export const resolveDashboardRedirect = (
   hasSession: boolean,
 ): RedirectTarget | null => {

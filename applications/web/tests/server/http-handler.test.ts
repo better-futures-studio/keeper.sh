@@ -1,14 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleApplicationRequest, resolveCanonicalRedirect } from "../../src/server/http-handler";
-
-const MOVED_PATHS: Record<string, string> = {
-  "/blog/keeper-sh-vs-calendarbridge": "/compare/calendarbridge-alternative",
-  "/blog/keeper-sh-vs-onecal": "/compare/onecal-alternative",
-};
-
-vi.mock("../../src/lib/moved-paths", () => ({
-  resolveMovedPath: (pathname: string) => MOVED_PATHS[pathname] ?? null,
-}));
 import type { Runtime, ServerConfig } from "../../src/server/types";
 
 const config: ServerConfig = {
@@ -54,8 +45,8 @@ function request(path: string, headers: Record<string, string> = {}): Request {
 }
 
 describe("handleApplicationRequest caching", () => {
-  it("marks a known blog post publicly cacheable and validatable", async () => {
-    const path = "/blog/known-post";
+  it("marks a known cacheable path publicly cacheable and validatable", async () => {
+    const path = "/cached-known";
     const runtime = createRuntime([path]);
 
     const response = await handleApplicationRequest(request(path), runtime, config);
@@ -68,7 +59,7 @@ describe("handleApplicationRequest caching", () => {
   });
 
   it("renders one shared document for every country and session", async () => {
-    const path = "/blog/shared-post";
+    const path = "/cached-shared";
     const runtime = createRuntime([path]);
 
     const german = await handleApplicationRequest(
@@ -95,8 +86,8 @@ describe("handleApplicationRequest caching", () => {
     expect(runtime.renderApp).toHaveBeenCalledTimes(1);
   });
 
-  it("serves a repeated blog post request from the cache without re-rendering", async () => {
-    const path = "/blog/cached-post";
+  it("serves a repeated cacheable request from the cache without re-rendering", async () => {
+    const path = "/cached-repeat";
     const runtime = createRuntime([path]);
 
     await handleApplicationRequest(request(path), runtime, config);
@@ -106,7 +97,7 @@ describe("handleApplicationRequest caching", () => {
   });
 
   it("answers a matching conditional request with 304", async () => {
-    const path = "/blog/conditional-post";
+    const path = "/cached-conditional";
     const runtime = createRuntime([path]);
 
     const first = await handleApplicationRequest(request(path), runtime, config);
@@ -121,9 +112,9 @@ describe("handleApplicationRequest caching", () => {
     expect(second.headers.get("etag")).toBe(etag);
   });
 
-  it("never caches or publicly labels an unknown blog slug", async () => {
-    const runtime = createRuntime(["/blog/known-post"]);
-    const path = "/blog/missing-post";
+  it("never caches or publicly labels an unknown path", async () => {
+    const runtime = createRuntime(["/cached-known"]);
+    const path = "/unknown-path";
 
     const first = await handleApplicationRequest(request(path), runtime, config);
     await handleApplicationRequest(request(path), runtime, config);
@@ -133,8 +124,8 @@ describe("handleApplicationRequest caching", () => {
     expect(runtime.renderApp).toHaveBeenCalledTimes(2);
   });
 
-  it("keeps a marketing page private for a request carrying a session cookie", async () => {
-    const path = "/blog/session-post";
+  it("keeps a cacheable page private for a request carrying a session cookie", async () => {
+    const path = "/cached-session";
     const runtime = createRuntime([path]);
 
     const response = await handleApplicationRequest(
@@ -148,7 +139,7 @@ describe("handleApplicationRequest caching", () => {
   });
 
   it("never lets a signed-in render reach the shared cache", async () => {
-    const path = "/blog/authenticated-first-post";
+    const path = "/cached-authenticated-first";
     const runtime = createCountingRuntime([path]);
 
     const authenticated = await handleApplicationRequest(
@@ -164,7 +155,7 @@ describe("handleApplicationRequest caching", () => {
   });
 
   it("serves an anonymous render to a later signed-in visitor", async () => {
-    const path = "/blog/anonymous-first-post";
+    const path = "/cached-anonymous-first";
     const runtime = createCountingRuntime([path]);
 
     await handleApplicationRequest(request(path), runtime, config);
@@ -207,19 +198,19 @@ describe("handleApplicationRequest caching", () => {
 
 describe("resolveCanonicalRedirect", () => {
   it("permanently redirects trailing-slash paths to their canonical form", () => {
-    const response = resolveCanonicalRedirect(new URL("https://www.keeper.sh/blog/"));
+    const response = resolveCanonicalRedirect(new URL("https://www.keeper.sh/privacy/"));
     expect(response?.status).toBe(308);
-    expect(response?.headers.get("location")).toBe("/blog");
+    expect(response?.headers.get("location")).toBe("/privacy");
   });
 
   it("preserves the query string when normalizing a trailing slash", () => {
-    const response = resolveCanonicalRedirect(new URL("https://www.keeper.sh/blog/?page=2"));
-    expect(response?.headers.get("location")).toBe("/blog?page=2");
+    const response = resolveCanonicalRedirect(new URL("https://www.keeper.sh/privacy/?page=2"));
+    expect(response?.headers.get("location")).toBe("/privacy?page=2");
   });
 
   it("collapses repeated trailing slashes", () => {
-    const response = resolveCanonicalRedirect(new URL("https://www.keeper.sh/blog///"));
-    expect(response?.headers.get("location")).toBe("/blog");
+    const response = resolveCanonicalRedirect(new URL("https://www.keeper.sh/privacy///"));
+    expect(response?.headers.get("location")).toBe("/privacy");
   });
 
   it("permanently redirects the client shell to the site root", () => {
@@ -233,26 +224,7 @@ describe("resolveCanonicalRedirect", () => {
   });
 
   it("leaves canonical paths untouched", () => {
-    expect(resolveCanonicalRedirect(new URL("https://www.keeper.sh/blog"))).toBeNull();
-  });
-
-  it("permanently redirects a moved comparison post to its /compare path", () => {
-    const response = resolveCanonicalRedirect(
-      new URL("https://www.keeper.sh/blog/keeper-sh-vs-calendarbridge"),
-    );
-
-    expect(response?.status).toBe(308);
-    expect(response?.headers.get("location")).toBe("/compare/calendarbridge-alternative");
-  });
-
-  it("reaches the moved comparison post in one hop from a trailing slash", () => {
-    const response = resolveCanonicalRedirect(
-      new URL("https://www.keeper.sh/blog/keeper-sh-vs-onecal/?ref=newsletter"),
-    );
-
-    expect(response?.headers.get("location")).toBe(
-      "/compare/onecal-alternative?ref=newsletter",
-    );
+    expect(resolveCanonicalRedirect(new URL("https://www.keeper.sh/privacy"))).toBeNull();
   });
 });
 

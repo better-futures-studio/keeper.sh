@@ -43,30 +43,8 @@ body {
   }
 }
 
-@media (width < 48rem) {
-  body:has(#marketing-header-menu) {
-    overflow-y: hidden;
-  }
-}
-
 #root {
   @apply w-full;
-}
-
-[data-session-slot] {
-  display: contents;
-}
-
-[data-session-slot="authenticated"] {
-  display: none;
-}
-
-[data-session="authed"] [data-session-slot="authenticated"] {
-  display: contents;
-}
-
-[data-session="authed"] [data-session-slot="unauthenticated"] {
-  display: none;
 }
 
 html {

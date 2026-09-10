@@ -3,13 +3,8 @@ import { defineConfig } from "vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import svgr from "vite-plugin-svgr";
-import react, { reactCompilerPreset } from '@vitejs/plugin-react'
-import babel from '@rolldown/plugin-babel'
-import { blogPlugin, comparePlugin, docsPlugin, guidesPlugin, movedPathsPlugin, recipesPlugin } from "./plugins/blog";
-import { changelogPlugin } from "./plugins/changelog";
-import { feedPlugin } from "./plugins/feed";
-import { changelogFeedPlugin } from "./plugins/changelog-feed";
-import { sitemapPlugin } from "./plugins/sitemap";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 
 export default defineConfig(({ isSsrBuild }) => ({
   resolve: {
@@ -18,12 +13,6 @@ export default defineConfig(({ isSsrBuild }) => ({
     },
   },
   plugins: [
-    blogPlugin(),
-    changelogPlugin(),
-    comparePlugin(),
-    docsPlugin(),
-    guidesPlugin(),
-    recipesPlugin(),
     tailwindcss(),
     tanstackRouter({
       autoCodeSplitting: true,
@@ -38,17 +27,12 @@ export default defineConfig(({ isSsrBuild }) => ({
       ],
     }),
     svgr(),
-    !isSsrBuild && movedPathsPlugin(),
-    !isSsrBuild && sitemapPlugin(),
-    !isSsrBuild && feedPlugin(),
-    !isSsrBuild && changelogFeedPlugin(),
-  ].filter(Boolean),
+  ],
   build: {
     manifest: !isSsrBuild,
     sourcemap: process.env.ENV !== "production",
     rollupOptions: !isSsrBuild
       ? {
-          external: ["mermaid"],
           output: {
             manualChunks(id) {
               if (id.includes("/react-dom/") || id.includes("/react/")) {

@@ -9,7 +9,6 @@ import { fetcher, HttpError } from "@/lib/fetcher";
 import { resolveErrorMessage } from "@/utils/errors";
 import type { AppRouterContext, ViteScript } from "@/lib/router-context";
 import { serializePublicRuntimeConfig } from "@/lib/runtime-config";
-import { clientStateScript } from "@/lib/client-state-script";
 
 const NON_RETRYABLE_STATUSES = new Set([401, 403, 404]);
 
@@ -71,7 +70,6 @@ function RootComponent() {
             __html: `window.__KEEPER_RUNTIME_CONFIG__ = ${serializePublicRuntimeConfig(runtimeConfig)};`,
           }}
         />
-        <script dangerouslySetInnerHTML={{ __html: clientStateScript }} />
         {viteAssets?.inlineStyles?.map((css, index) => (
           <style key={index} dangerouslySetInnerHTML={{ __html: css }} />
         ))}
@@ -114,8 +112,8 @@ function ErrorFallback({ error }: ErrorComponentProps) {
       <Text size="sm" tone="muted">
         {resolveErrorMessage(error, "An unexpected error occurred.")}
       </Text>
-      <LinkButton to="/" variant="border" size="compact">
-        <ButtonText>Go home</ButtonText>
+      <LinkButton to="/login" variant="border" size="compact">
+        <ButtonText>Go to login</ButtonText>
       </LinkButton>
     </div>
   );

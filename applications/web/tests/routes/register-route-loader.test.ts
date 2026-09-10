@@ -33,7 +33,7 @@ const runRegisterLoader = async (
     context: {
       fetchApi: async () => body,
     },
-    search,
+    location: { search },
   });
 };
 

@@ -13,7 +13,7 @@ on:
         description: Which submodule to bump
         required: true
         type: choice
-        options: [seo, infra, claude]
+        options: [infra, claude]
 
 permissions:
   contents: read
@@ -28,9 +28,8 @@ jobs:
           NAME: ${{ github.event.client_payload.submodule || inputs.submodule }}
         run: |
           case "$NAME" in
-            seo)    echo "path=applications/web/seo" >> "$GITHUB_OUTPUT" ;;
-            infra)  echo "path=infra"                 >> "$GITHUB_OUTPUT" ;;
-            claude) echo "path=.claude"               >> "$GITHUB_OUTPUT" ;;
+            infra)  echo "path=infra"   >> "$GITHUB_OUTPUT" ;;
+            claude) echo "path=.claude" >> "$GITHUB_OUTPUT" ;;
             *)     echo "Unknown submodule: '$NAME'" >&2; exit 1 ;;
           esac
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
@@ -50,7 +49,6 @@ jobs:
           private-key: ${{ secrets.KEEPER_BOT_PRIVATE_KEY }}
           owner: keeperdotsh
           repositories: |
-            seo
             infra
             .claude
 
@@ -66,7 +64,7 @@ jobs:
           git config --global \
             url."https://x-access-token:${SUBMODULE_TOKEN}@github.com/keeperdotsh/".insteadOf \
             "https://github.com/keeperdotsh/"
-          git submodule update --init applications/web/seo "${{ steps.target.outputs.path }}"
+          git submodule update --init "${{ steps.target.outputs.path }}"
 
       - name: Move the pin
         id: bump

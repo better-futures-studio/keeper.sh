@@ -26,10 +26,9 @@
       "entry": [
         "src/main.tsx",
         "src/server.tsx",
-        "plugins/**/*.ts",
         "scripts/**/*.ts"
       ],
-      "project": ["src/**/*.{ts,tsx}", "plugins/**/*.ts", "scripts/**/*.ts"],
+      "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts"],
       "ignoreDependencies": ["@babel/preset-typescript"]
     },
     "services/*": {

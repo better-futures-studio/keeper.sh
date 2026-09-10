@@ -7,10 +7,10 @@ import {
 } from "@/lib/mcp-auth-flow";
 
 export const Route = createFileRoute("/(auth)/register")({
-  loader: async ({ context, search }) => {
+  loader: async ({ context, location }) => {
     const capabilities = await fetchAuthCapabilitiesWithApi(context.fetchApi);
     if (!offersSeparateSignup(capabilities)) {
-      throw redirect({ to: "/login", search });
+      throw redirect({ to: "/login", search: location.search });
     }
     return capabilities;
   },

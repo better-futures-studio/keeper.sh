@@ -533,7 +533,7 @@ function AnimatedBackWrapper({ children }: { children: React.ReactNode }) {
 function BackButton() {
   return (
     <AnimatedBackWrapper>
-      <LinkButton to="/" variant="border" className="self-stretch justify-center mr-2">
+      <LinkButton to="/login" variant="border" className="self-stretch justify-center mr-2">
         <ButtonIcon>
           <ArrowLeft size={16} />
         </ButtonIcon>
