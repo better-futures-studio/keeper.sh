@@ -4,7 +4,7 @@ import {
 } from "@keeper.sh/database/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import type { database as contextDatabase } from "@/context";
-import { removeMappingsForCalendars } from "./calendar-hidden";
+import { applyCalendarVisibilityTransition } from "./calendar-hidden";
 
 const EMPTY_LIST_COUNT = 0;
 
@@ -68,6 +68,9 @@ const applyAccountCalendarSelection = (
     const newlyHiddenIds = accountCalendars
       .filter(({ hidden, id }) => !visibleIdSet.has(id) && !hidden)
       .map(({ id }) => id);
+    const newlyVisibleIds = accountCalendars
+      .filter(({ hidden, id }) => visibleIdSet.has(id) && hidden)
+      .map(({ id }) => id);
 
     if (visibleIds.length > EMPTY_LIST_COUNT) {
       await transaction
@@ -91,7 +94,10 @@ const applyAccountCalendarSelection = (
         ));
     }
 
-    await removeMappingsForCalendars(transaction, newlyHiddenIds);
+    await applyCalendarVisibilityTransition(transaction, {
+      newlyHiddenIds,
+      newlyVisibleIds,
+    });
 
     return {
       kind: "ok" as const,

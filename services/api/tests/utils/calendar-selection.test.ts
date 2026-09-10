@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
+import {
+  calendarSnapshotsTable,
+  eventStatesTable,
+  sourceDestinationMappingsTable,
+} from "@keeper.sh/database/schema";
 import { applyAccountCalendarSelection } from "../../src/utils/calendar-selection";
 import type { SelectionClient } from "../../src/utils/calendar-selection";
+import { FRESH_INGEST_STATE } from "../../src/utils/calendar-hidden";
 
 interface CalendarRow {
   hidden: boolean;
@@ -16,14 +22,14 @@ const createMockClient = (options: {
   calendars: CalendarRow[];
 }) => {
   const state = {
-    mappingDeletes: [] as string[][],
-    updates: [] as { hidden: boolean; ids?: unknown }[],
+    deletedTables: [] as unknown[],
+    updates: [] as Record<string, unknown>[],
   };
 
   const transaction = {
-    delete: () => ({
+    delete: (table: unknown) => ({
       where: () => {
-        state.mappingDeletes.push(options.calendars.map(({ id }) => id));
+        state.deletedTables.push(table);
         return Promise.resolve();
       },
     }),
@@ -46,7 +52,7 @@ const createMockClient = (options: {
       }),
     }),
     update: () => ({
-      set: (values: { hidden: boolean }) => ({
+      set: (values: Record<string, unknown>) => ({
         where: () => {
           state.updates.push(values);
           return Promise.resolve();
@@ -91,7 +97,7 @@ describe("applyAccountCalendarSelection", () => {
     expect(result).toEqual({ kind: "unknown-calendar-ids" });
   });
 
-  it("marks listed calendars visible, hides the rest, and drops mappings for newly hidden ones", async () => {
+  it("marks listed calendars visible, hides the rest, and drops ingested data for newly hidden ones", async () => {
     const { client, state } = createMockClient({
       accountExists: true,
       calendars: [
@@ -107,10 +113,14 @@ describe("applyAccountCalendarSelection", () => {
       selection: { hidden: [CAL_HIDDEN], visible: [CAL_VISIBLE] },
     });
     expect(state.updates).toEqual([{ hidden: false }, { hidden: true }]);
-    expect(state.mappingDeletes).toHaveLength(1);
+    expect(state.deletedTables).toEqual([
+      eventStatesTable,
+      calendarSnapshotsTable,
+      sourceDestinationMappingsTable,
+    ]);
   });
 
-  it("does not drop mappings for calendars that were already hidden", async () => {
+  it("does not drop mappings or ingested data for calendars that were already hidden", async () => {
     const { client, state } = createMockClient({
       accountExists: true,
       calendars: [
@@ -125,6 +135,31 @@ describe("applyAccountCalendarSelection", () => {
       kind: "ok",
       selection: { hidden: [CAL_HIDDEN], visible: [CAL_VISIBLE] },
     });
-    expect(state.mappingDeletes).toEqual([]);
+    expect(state.deletedTables).toEqual([]);
+    expect(state.updates).toEqual([{ hidden: false }, { hidden: true }]);
+  });
+
+  it("resets ingest state when a hidden calendar is shown again", async () => {
+    const { client, state } = createMockClient({
+      accountExists: true,
+      calendars: [
+        { hidden: false, id: CAL_VISIBLE },
+        { hidden: true, id: CAL_HIDDEN },
+      ],
+    });
+
+    const result = await applyAccountCalendarSelection(
+      client,
+      "user-1",
+      ACCOUNT_ID,
+      [CAL_VISIBLE, CAL_HIDDEN],
+    );
+
+    expect(result).toEqual({
+      kind: "ok",
+      selection: { hidden: [], visible: [CAL_VISIBLE, CAL_HIDDEN] },
+    });
+    expect(state.updates).toEqual([{ hidden: false }, FRESH_INGEST_STATE]);
+    expect(state.deletedTables).toEqual([calendarSnapshotsTable]);
   });
 });

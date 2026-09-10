@@ -8,6 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { resolveIsAllDayEvent, resolveRepresentableTimeRange } from "@keeper.sh/calendar";
 
 import type { KeeperDatabase, KeeperEvent } from "@/types";
+import { visibleCalendarCondition } from "@/utils/calendar-hidden";
 import {
   parseEventReference,
   projectSyncedEvents,
@@ -75,6 +76,7 @@ const getUserEvent = async (
       and(
         eq(userEventsTable.id, resourceId),
         eq(userEventsTable.userId, userId),
+        visibleCalendarCondition,
       ),
     )
     .limit(1);
@@ -113,6 +115,7 @@ const getSyncedOwner = async (
       and(
         eq(eventStatesTable.id, resourceId),
         eq(calendarsTable.userId, userId),
+        visibleCalendarCondition,
       ),
     )
     .limit(1);

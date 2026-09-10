@@ -23,7 +23,8 @@ create table calendars (
   "name" text not null,
   "url" text,
   "calendarType" text not null default 'source',
-  "capabilities" text[] not null default '{"pull"}'
+  "capabilities" text[] not null default '{"pull"}',
+  "hidden" boolean not null default false
 );
 create table event_states (
   "id" uuid primary key,

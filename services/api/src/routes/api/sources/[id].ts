@@ -15,8 +15,25 @@ import { withProviderMetadata } from "@/utils/provider-display";
 import { syncDefaultFeedMembership } from "@/utils/ical-feeds";
 import type { FeedMembershipClient } from "@/utils/ical-feeds";
 import { deleteSourceCalendar } from "@/utils/source-calendars";
-import { removeMappingsForCalendars } from "@/utils/calendar-hidden";
+import {
+  applyHiddenFieldTransition,
+  readCalendarHidden,
+} from "@/utils/calendar-hidden";
+import type { HiddenCalendarDataClient } from "@/utils/calendar-hidden";
 import { handlePatchSourceRoute } from "./[id]/source-item-routes";
+
+const readPreviousHiddenForPatch = async (
+  client: HiddenCalendarDataClient,
+  sourceCalendarId: string,
+  userId: string,
+  hiddenUpdate: unknown,
+): Promise<boolean | null> => {
+  if (typeof hiddenUpdate !== "boolean") {
+    return null;
+  }
+
+    return await readCalendarHidden(client, sourceCalendarId, userId);
+};
 
 const GET = withWideEvent(
   withAuth(async ({ params, userId }) => {
@@ -121,6 +138,12 @@ const PATCH = withWideEvent(
                 return pushCalendars.map(({ id: calendarId }) => calendarId);
               },
               () => database.transaction(async (transaction) => {
+                const previousHidden = await readPreviousHiddenForPatch(
+                  transaction,
+                  sourceCalendarId,
+                  userIdToUpdate,
+                  updates.hidden,
+                );
                 const [updated] = await transaction
                   .update(calendarsTable)
                   .set(updates)
@@ -134,8 +157,13 @@ const PATCH = withWideEvent(
                 if (updated?.capabilities.includes("push")) {
                   await requestUserSync(transaction, userIdToUpdate);
                 }
-                if (updated && updates.hidden === true) {
-                  await removeMappingsForCalendars(transaction, [sourceCalendarId]);
+                if (updated) {
+                  await applyHiddenFieldTransition(
+                    transaction,
+                    sourceCalendarId,
+                    previousHidden,
+                    updates.hidden,
+                  );
                 }
                 await applyFeedMembership(transaction, updated ?? null);
                 return updated ?? null;
@@ -148,6 +176,12 @@ const PATCH = withWideEvent(
           }
 
           return await database.transaction(async (transaction) => {
+            const previousHidden = await readPreviousHiddenForPatch(
+              transaction,
+              sourceCalendarId,
+              userIdToUpdate,
+              updates.hidden,
+            );
             const [updated] = await transaction
               .update(calendarsTable)
               .set(updates)
@@ -161,8 +195,13 @@ const PATCH = withWideEvent(
             if (updated && "markEventsAsPrivate" in updates) {
               await requestUserSync(transaction, userIdToUpdate);
             }
-            if (updated && updates.hidden === true) {
-              await removeMappingsForCalendars(transaction, [sourceCalendarId]);
+            if (updated) {
+              await applyHiddenFieldTransition(
+                transaction,
+                sourceCalendarId,
+                previousHidden,
+                updates.hidden,
+              );
             }
             await applyFeedMembership(transaction, updated ?? null);
             return updated ?? null;

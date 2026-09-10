@@ -60,7 +60,9 @@ describe("buildFeedCalendarsQuery", () => {
     expect(sql).toContain(`"calendars"."syncHistoricRange"`);
     expect(sql).toContain(`"ical_feed_calendars"."feedId" = $`);
     expect(sql).toContain(`"calendars"."userId" = $`);
+    expect(sql).toContain(`"calendars"."hidden" = $`);
     expect(params).toContain("feed-1");
     expect(params).toContain("user-1");
+    expect(params).toContain(false);
   });
 });

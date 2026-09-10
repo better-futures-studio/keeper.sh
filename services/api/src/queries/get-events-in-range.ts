@@ -4,6 +4,7 @@ import {
   eventStatesTable,
   userEventsTable,
 } from "@keeper.sh/database/schema";
+import { visibleCalendarCondition } from "@/utils/calendar-hidden";
 import { normalizeDateRange } from "@/utils/date-range";
 import { and, arrayContains, asc, eq, gte, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
@@ -48,6 +49,7 @@ const getSourcesForUser = async (
   const sourceConditions: SQL[] = [
     eq(calendarsTable.userId, userId),
     arrayContains(calendarsTable.capabilities, ["pull"]),
+    visibleCalendarCondition,
   ];
 
   if (filters?.calendarId && filters.calendarId.length > 0) {

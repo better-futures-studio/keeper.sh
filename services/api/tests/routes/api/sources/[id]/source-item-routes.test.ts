@@ -184,6 +184,27 @@ describe("handlePatchSourceRoute", () => {
     expect(receivedUpdates).toEqual({ hidden: true });
   });
 
+  it("passes hidden false through so showing can reset ingest", async () => {
+    let receivedUpdates: Record<string, unknown> = {};
+    const response = await handlePatchSourceRoute(
+      {
+        body: { hidden: false },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(false),
+        updateSource: (_userId, _sourceId, updates) => {
+          receivedUpdates = updates;
+          return Promise.resolve({ id: "source-1", ...updates });
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(receivedUpdates).toEqual({ hidden: false });
+  });
+
   it("returns updated source when pro user sets markEventsAsPrivate", async () => {
     const response = await handlePatchSourceRoute(
       {

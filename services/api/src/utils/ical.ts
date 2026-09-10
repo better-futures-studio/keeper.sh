@@ -7,6 +7,7 @@ import {
 import { and, asc, eq, gte, inArray, isNotNull, lte, ne, or, isNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { widelog } from "@/utils/logging";
+import { visibleCalendarCondition } from "./calendar-hidden";
 import { generateCalendarFeed } from "./ical-feed";
 import type { FeedExclusionCounts, FeedResponse, IcalFeedQuery } from "./ical-feed";
 import type { FeedSettings } from "./ical-format";
@@ -152,6 +153,7 @@ const buildFeedCalendarsQuery = (
       and(
         eq(icalFeedCalendarsTable.feedId, feed.feedId),
         eq(calendarsTable.userId, feed.userId),
+        visibleCalendarCondition,
       ),
     );
 
