@@ -50,8 +50,6 @@ import { Route as marketingDocsSlugRouteImport } from './../../routes/(marketing
 import { Route as marketingCompareSlugRouteImport } from './../../routes/(marketing)/compare/$slug'
 import { Route as marketingChangelogSlugRouteImport } from './../../routes/(marketing)/changelog/$slug'
 import { Route as marketingBlogSlugRouteImport } from './../../routes/(marketing)/blog/$slug'
-import { Route as dashboardDashboardReportRouteImport } from './../../routes/(dashboard)/dashboard/report'
-import { Route as dashboardDashboardFeedbackRouteImport } from './../../routes/(dashboard)/dashboard/feedback'
 import { Route as oauthDashboardConnectRouteRouteImport } from './../../routes/(oauth)/dashboard/connect/route'
 import { Route as dashboardDashboardSettingsRouteRouteImport } from './../../routes/(dashboard)/dashboard/settings/route'
 import { Route as dashboardDashboardIcalRouteRouteImport } from './../../routes/(dashboard)/dashboard/ical/route'
@@ -283,18 +281,6 @@ const marketingBlogSlugRoute = marketingBlogSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => marketingBlogRouteRoute,
 } as any)
-const dashboardDashboardReportRoute =
-  dashboardDashboardReportRouteImport.update({
-    id: '/dashboard/report',
-    path: '/dashboard/report',
-    getParentRoute: () => dashboardRouteRoute,
-  } as any)
-const dashboardDashboardFeedbackRoute =
-  dashboardDashboardFeedbackRouteImport.update({
-    id: '/dashboard/feedback',
-    path: '/dashboard/feedback',
-    getParentRoute: () => dashboardRouteRoute,
-  } as any)
 const oauthDashboardConnectRouteRoute =
   oauthDashboardConnectRouteRouteImport.update({
     id: '/connect',
@@ -481,8 +467,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/connect': typeof oauthDashboardConnectRouteRouteWithChildren
   '/dashboard/ical': typeof dashboardDashboardIcalRouteRouteWithChildren
   '/dashboard/settings': typeof dashboardDashboardSettingsRouteRouteWithChildren
-  '/dashboard/feedback': typeof dashboardDashboardFeedbackRoute
-  '/dashboard/report': typeof dashboardDashboardReportRoute
   '/blog/$slug': typeof marketingBlogSlugRoute
   '/changelog/$slug': typeof marketingChangelogSlugRoute
   '/compare/$slug': typeof marketingCompareSlugRoute
@@ -544,8 +528,6 @@ export interface FileRoutesByTo {
   '/': typeof marketingIndexRoute
   '/dashboard/accounts': typeof dashboardDashboardAccountsRouteRouteWithChildren
   '/dashboard/connect': typeof dashboardDashboardConnectIndexRoute
-  '/dashboard/feedback': typeof dashboardDashboardFeedbackRoute
-  '/dashboard/report': typeof dashboardDashboardReportRoute
   '/blog/$slug': typeof marketingBlogSlugRoute
   '/changelog/$slug': typeof marketingChangelogSlugRoute
   '/compare/$slug': typeof marketingCompareSlugRoute
@@ -615,8 +597,6 @@ export interface FileRoutesById {
   '/(dashboard)/dashboard/ical': typeof dashboardDashboardIcalRouteRouteWithChildren
   '/(dashboard)/dashboard/settings': typeof dashboardDashboardSettingsRouteRouteWithChildren
   '/(oauth)/dashboard/connect': typeof oauthDashboardConnectRouteRouteWithChildren
-  '/(dashboard)/dashboard/feedback': typeof dashboardDashboardFeedbackRoute
-  '/(dashboard)/dashboard/report': typeof dashboardDashboardReportRoute
   '/(marketing)/blog/$slug': typeof marketingBlogSlugRoute
   '/(marketing)/changelog/$slug': typeof marketingChangelogSlugRoute
   '/(marketing)/compare/$slug': typeof marketingCompareSlugRoute
@@ -684,8 +664,6 @@ export interface FileRouteTypes {
     | '/dashboard/connect'
     | '/dashboard/ical'
     | '/dashboard/settings'
-    | '/dashboard/feedback'
-    | '/dashboard/report'
     | '/blog/$slug'
     | '/changelog/$slug'
     | '/compare/$slug'
@@ -747,8 +725,6 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard/accounts'
     | '/dashboard/connect'
-    | '/dashboard/feedback'
-    | '/dashboard/report'
     | '/blog/$slug'
     | '/changelog/$slug'
     | '/compare/$slug'
@@ -817,8 +793,6 @@ export interface FileRouteTypes {
     | '/(dashboard)/dashboard/ical'
     | '/(dashboard)/dashboard/settings'
     | '/(oauth)/dashboard/connect'
-    | '/(dashboard)/dashboard/feedback'
-    | '/(dashboard)/dashboard/report'
     | '/(marketing)/blog/$slug'
     | '/(marketing)/changelog/$slug'
     | '/(marketing)/compare/$slug'
@@ -1158,20 +1132,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof marketingBlogSlugRouteImport
       parentRoute: typeof marketingBlogRouteRoute
     }
-    '/(dashboard)/dashboard/report': {
-      id: '/(dashboard)/dashboard/report'
-      path: '/dashboard/report'
-      fullPath: '/dashboard/report'
-      preLoaderRoute: typeof dashboardDashboardReportRouteImport
-      parentRoute: typeof dashboardRouteRoute
-    }
-    '/(dashboard)/dashboard/feedback': {
-      id: '/(dashboard)/dashboard/feedback'
-      path: '/dashboard/feedback'
-      fullPath: '/dashboard/feedback'
-      preLoaderRoute: typeof dashboardDashboardFeedbackRouteImport
-      parentRoute: typeof dashboardRouteRoute
-    }
     '/(oauth)/dashboard/connect': {
       id: '/(oauth)/dashboard/connect'
       path: '/connect'
@@ -1468,8 +1428,6 @@ interface dashboardRouteRouteChildren {
   dashboardDashboardConnectRouteRoute: typeof dashboardDashboardConnectRouteRouteWithChildren
   dashboardDashboardIcalRouteRoute: typeof dashboardDashboardIcalRouteRouteWithChildren
   dashboardDashboardSettingsRouteRoute: typeof dashboardDashboardSettingsRouteRouteWithChildren
-  dashboardDashboardFeedbackRoute: typeof dashboardDashboardFeedbackRoute
-  dashboardDashboardReportRoute: typeof dashboardDashboardReportRoute
   dashboardDashboardIndexRoute: typeof dashboardDashboardIndexRoute
   dashboardDashboardEventsIndexRoute: typeof dashboardDashboardEventsIndexRoute
   dashboardDashboardIntegrationsIndexRoute: typeof dashboardDashboardIntegrationsIndexRoute
@@ -1485,8 +1443,6 @@ const dashboardRouteRouteChildren: dashboardRouteRouteChildren = {
     dashboardDashboardIcalRouteRouteWithChildren,
   dashboardDashboardSettingsRouteRoute:
     dashboardDashboardSettingsRouteRouteWithChildren,
-  dashboardDashboardFeedbackRoute: dashboardDashboardFeedbackRoute,
-  dashboardDashboardReportRoute: dashboardDashboardReportRoute,
   dashboardDashboardIndexRoute: dashboardDashboardIndexRoute,
   dashboardDashboardEventsIndexRoute: dashboardDashboardEventsIndexRoute,
   dashboardDashboardIntegrationsIndexRoute:

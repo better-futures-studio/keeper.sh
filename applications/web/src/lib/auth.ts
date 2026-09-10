@@ -94,6 +94,3 @@ export const resetPassword = async (token: string, newPassword: string): Promise
 
 export const changePassword = (currentPassword: string, newPassword: string) =>
   authPost("/api/auth/change-password", { currentPassword, newPassword });
-
-export const deleteAccount = (password?: string) =>
-  authPost("/api/auth/delete-user", { ...(password && { password }) });

@@ -10,7 +10,6 @@ const schema = {
   DATABASE_POOL_MAX: "number?",
   DATABASE_URL: "string.url",
   ENCRYPTION_KEY: "string?",
-  FEEDBACK_EMAIL: "string?",
   GOOGLE_CLIENT_ID: "string?",
   GOOGLE_CLIENT_SECRET: "string?",
   MICROSOFT_CLIENT_ID: "string?",

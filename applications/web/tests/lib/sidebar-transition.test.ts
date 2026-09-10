@@ -7,7 +7,7 @@ describe("resolveSidebarDirection", () => {
   const cases = [
     { name: "push deeper", from: at("/dashboard", 0), to: at("/dashboard/settings", 1), expected: "forward" },
     { name: "push deeper twice", from: at("/dashboard/settings", 1), to: at("/dashboard/settings/passkeys", 2), expected: "forward" },
-    { name: "push sibling", from: at("/dashboard/report", 1), to: at("/dashboard/feedback", 2), expected: "forward" },
+    { name: "push sibling", from: at("/dashboard/settings", 1), to: at("/dashboard/ical", 2), expected: "forward" },
     { name: "history back", from: at("/dashboard/settings", 1), to: at("/dashboard", 0), expected: "back" },
     { name: "history back to a deeper page", from: at("/dashboard", 2), to: at("/dashboard/settings", 1), expected: "back" },
     { name: "push to an ancestor", from: at("/dashboard/settings/passkeys", 0), to: at("/dashboard", 1), expected: "back" },

@@ -11,7 +11,6 @@ import { checkout, polar, portal } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { Resend } from "resend";
 import { usernameOnly } from "./plugins/username-only";
-import { deletePolarCustomerByExternalId } from "./polar-customer-delete";
 import { writeAuthStderr } from "./runtime-environment";
 import { resolveAuthCapabilities } from "./capabilities";
 import {
@@ -505,14 +504,7 @@ const createAuth = (config: AuthConfig) => {
     trustedOrigins,
     user: {
       deleteUser: {
-        afterDelete: async (user) => {
-          if (!polarClient) {
-            return;
-          }
-
-          await deletePolarCustomerByExternalId(polarClient, user.id);
-        },
-        enabled: true,
+        enabled: false,
       },
     },
   });

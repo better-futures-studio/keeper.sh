@@ -45,14 +45,6 @@ type SyncRange = typeof syncRangeSchema.infer;
 const billingPeriodSchema = type("'monthly' | 'yearly'");
 type BillingPeriod = typeof billingPeriodSchema.infer;
 
-const feedbackRequestSchema = type({
-  message: "string",
-  type: "'feedback' | 'report'",
-  "wantsFollowUp?": "boolean",
-  "+": "reject",
-});
-type FeedbackRequest = typeof feedbackRequestSchema.infer;
-
 const createSourceSchema = type({
   name: "string",
   url: "string",
@@ -541,7 +533,6 @@ export {
   syncRangeSchema,
   icalFeedNameSchema,
   billingPeriodSchema,
-  feedbackRequestSchema,
   createSourceSchema,
   stringSchema,
   googleEventSchema,
@@ -596,7 +587,6 @@ export type {
   Plan,
   SyncRange,
   BillingPeriod,
-  FeedbackRequest,
   CreateSource,
   GoogleEvent,
   GoogleEventList,

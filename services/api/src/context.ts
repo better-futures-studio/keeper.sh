@@ -1,4 +1,3 @@
-import { Resend } from "resend";
 import env from "./env";
 import { createDatabase } from "@keeper.sh/database";
 import { syncStatusTable } from "@keeper.sh/database/schema";
@@ -147,17 +146,6 @@ const getCurrentSyncAggregate = (
 const getCachedSyncAggregate = (userId: string) =>
   syncAggregateRuntime.getCachedSyncAggregate(userId);
 
-const createResendClient = (): Resend | null => {
-  if (!env.RESEND_API_KEY) {
-    return null;
-  }
-
-  return new Resend(env.RESEND_API_KEY);
-};
-
-const resend = createResendClient();
-const feedbackEmail = env.FEEDBACK_EMAIL ?? null;
-
 const baseUrl = env.BETTER_AUTH_URL;
 const encryptionKey = env.ENCRYPTION_KEY;
 const webhookConfig = resolveWebhookConfig(env.WEBHOOK_PUBLIC_URL);
@@ -174,8 +162,6 @@ export {
   premiumService,
   oauthProviders,
   refreshLockStore,
-  resend,
-  feedbackEmail,
   baseUrl,
   encryptionKey,
   getCurrentSyncAggregate,
