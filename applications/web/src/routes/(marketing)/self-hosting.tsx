@@ -25,7 +25,6 @@ import { MarketingIllustrationSetup } from "@/illustrations/marketing-illustrati
 import { MarketingIllustrationSync } from "@/illustrations/marketing-illustration-sync";
 import { canonicalUrl, jsonLdScript, seoMeta, webPageSchema, breadcrumbSchema, breadcrumbTrail, faqSchema } from "@/lib/seo";
 import { Breadcrumb } from "@/components/ui/primitives/breadcrumb";
-import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import { useSignupEntry } from "@/features/marketing/signup-entry";
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
 import ArrowUpRightIcon from "lucide-react/dist/esm/icons/arrow-up-right";
@@ -223,8 +222,6 @@ function SelfHostingPage() {
               to={signupPath}
               size="compact"
               variant="inverse-ghost"
-              data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked}
-              data-visitors-cta="self-hosting"
             >
               <ButtonText>Use the Hosted Version</ButtonText>
               <ButtonIcon>

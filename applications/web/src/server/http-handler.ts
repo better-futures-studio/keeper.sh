@@ -42,22 +42,13 @@ const baseSecurityHeaders: Record<string, string> = {
   "permissions-policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
 };
 
-const googleAdsHosts = [
-  "https://www.googletagmanager.com",
-  "https://www.googleadservices.com",
-  "https://googleads.g.doubleclick.net",
-  "https://ad.doubleclick.net",
-  "https://pagead2.googlesyndication.com",
-  "https://www.google.com",
-].join(" ");
-
 const cspHeader = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' ${googleAdsHosts} https://cdn.visitors.now`,
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: ${googleAdsHosts}`,
+  "img-src 'self' data:",
   "font-src 'self'",
-  `connect-src 'self' ${googleAdsHosts} https://www.google-analytics.com https://cdn.visitors.now https://e.visitors.now`,
+  "connect-src 'self'",
   "frame-src https://polar.sh",
   "frame-ancestors 'none'",
   "base-uri 'self'",

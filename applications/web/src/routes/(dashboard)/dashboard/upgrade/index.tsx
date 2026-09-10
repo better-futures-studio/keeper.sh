@@ -14,7 +14,6 @@ import {
 } from "@/features/dashboard/components/upgrade-card";
 import Check from "lucide-react/dist/esm/icons/check";
 import { HttpError } from "@/lib/fetcher";
-import { track, ANALYTICS_EVENTS, reportPurchaseConversion } from "@/lib/analytics";
 import {
   fetchSubscriptionStateWithApi,
   useSubscription,
@@ -82,8 +81,6 @@ function UpgradePage() {
   const [yearly, setYearly] = useState(false);
 
   const handleBillingToggle = (checked: boolean) => {
-    const interval = checked ? "annual" : "monthly";
-    track(ANALYTICS_EVENTS.upgrade_billing_toggled, { interval });
     setYearly(checked);
   };
   const [isPending, startTransition] = useTransition();
@@ -94,14 +91,9 @@ function UpgradePage() {
 
   const handleUpgrade = () => {
     if (!productId) return;
-    track(ANALYTICS_EVENTS.upgrade_started);
     startTransition(async () => {
       await openCheckout(productId, {
         onSuccess: () => {
-          reportPurchaseConversion(runtimeConfig, {
-            currency: "USD",
-            value: yearly ? proPlan.yearlyPrice : proPlan.monthlyPrice,
-          });
           mutate();
         },
       });
@@ -109,7 +101,6 @@ function UpgradePage() {
   };
 
   const handleManage = () => {
-    track(ANALYTICS_EVENTS.plan_managed);
     startTransition(async () => {
       await openCustomerPortal();
     });

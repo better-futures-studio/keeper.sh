@@ -7,7 +7,6 @@ import { ExternalTextLink, TextLink } from "@/components/ui/primitives/text-link
 import { MarketingCtaCard, MarketingCtaSection } from "@/features/marketing/components/marketing-cta";
 import { canonicalUrl, jsonLdScript, seoMeta, webPageSchema, breadcrumbSchema, breadcrumbTrail, personSchema } from "@/lib/seo";
 import { Breadcrumb } from "@/components/ui/primitives/breadcrumb";
-import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import { useSignupEntry } from "@/features/marketing/signup-entry";
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
 import ArrowUpRightIcon from "lucide-react/dist/esm/icons/arrow-up-right";
@@ -151,8 +150,6 @@ function AboutPage() {
               to={signupPath}
               size="compact"
               variant="inverse"
-              data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked}
-              data-visitors-cta="about"
             >
               <ButtonText>Sync Calendars</ButtonText>
               <ButtonIcon>

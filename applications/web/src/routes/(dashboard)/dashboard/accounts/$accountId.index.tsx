@@ -14,7 +14,6 @@ import { Collapsible } from "@/components/ui/primitives/collapsible";
 import { MetadataRow } from "@/features/dashboard/components/metadata-row";
 import { useReauthAccounts } from "@/features/dashboard/components/reauth/use-reauth-accounts";
 import { fetcher, apiFetch } from "@/lib/fetcher";
-import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { formatDate } from "@/lib/time";
 import { invalidateAccountsAndSources, setCalendarHidden } from "@/lib/swr";
 import type { CalendarAccount, CalendarDetail, CalendarSource } from "@/types/api";
@@ -143,11 +142,6 @@ function RefreshCalendarsItem({ accountId }: { accountId: string }) {
       try {
         const response = await apiFetch(`/api/accounts/${accountId}/refresh`, { method: "POST" });
         const body: { imported: number; missing: number; restored: number } = await response.json();
-        track(ANALYTICS_EVENTS.calendar_account_refreshed, {
-          imported: body.imported,
-          missing: body.missing,
-          restored: body.restored,
-        });
         setResult(
           `${pluralize(body.imported, "new calendar")} imported, `
           + `${pluralize(body.missing, "calendar")} not found at the provider, `
@@ -201,9 +195,6 @@ function AccountDetailPage() {
     startDeleteTransition(async () => {
       try {
         await apiFetch(`/api/accounts/${accountId}`, { method: "DELETE" });
-        if (account) {
-          track(ANALYTICS_EVENTS.calendar_account_deleted, { provider: account.provider });
-        }
         await invalidateAccountsAndSources(globalMutate, `/api/accounts/${accountId}`);
         navigate({ to: "/dashboard" });
       } catch (err) {

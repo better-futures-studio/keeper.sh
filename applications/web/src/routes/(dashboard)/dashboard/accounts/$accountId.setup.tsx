@@ -7,7 +7,6 @@ import { DashboardSection } from "@/components/ui/primitives/dashboard-heading";
 import { Button, LinkButton, ButtonText } from "@/components/ui/primitives/button";
 import { Text } from "@/components/ui/primitives/text";
 import { apiFetch } from "@/lib/fetcher";
-import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { useEntitlements, useMutateEntitlements, canAddMore } from "@/hooks/use-entitlements";
 import { resolveErrorMessage } from "@/utils/errors";
 import type { CalendarSource } from "@/types/api";
@@ -140,7 +139,6 @@ function createSetupStepActions({
 
   return {
     advanceFromRename: () => {
-      track(ANALYTICS_EVENTS.setup_step_completed, { step: "rename" });
       if (destinationCount > 0) {
         navigateToStep("destinations", 0);
         return;
@@ -148,7 +146,6 @@ function createSetupStepActions({
       advanceToSources();
     },
     advanceFromDestinations: (currentIndex: number) => {
-      track(ANALYTICS_EVENTS.setup_step_completed, { step: "destinations" });
       const nextIndex = resolveNextIndex(currentIndex, destinationCount);
       if (nextIndex !== undefined) {
         navigateToStep("destinations", nextIndex);
@@ -157,13 +154,11 @@ function createSetupStepActions({
       advanceToSources();
     },
     advanceFromSources: (currentIndex: number) => {
-      track(ANALYTICS_EVENTS.setup_step_completed, { step: "sources" });
       const nextIndex = resolveNextIndex(currentIndex, sourceCount);
       if (nextIndex !== undefined) {
         navigateToStep("sources", nextIndex);
         return;
       }
-      track(ANALYTICS_EVENTS.setup_completed);
       navigateToDashboard();
     },
   };
@@ -362,7 +357,6 @@ function SelectSection({
           body: JSON.stringify({ calendarIds }),
         });
         await globalMutate("/api/sources");
-        track(ANALYTICS_EVENTS.setup_step_completed, { step: "select" });
         navigate({
           to: "/dashboard/accounts/$accountId/setup",
           params: { accountId },
@@ -411,7 +405,6 @@ function SelectSection({
           to="/dashboard"
           variant="ghost"
           className="w-full justify-center"
-          data-visitors-event={ANALYTICS_EVENTS.setup_skipped}
         >
           <ButtonText>Skip</ButtonText>
         </LinkButton>

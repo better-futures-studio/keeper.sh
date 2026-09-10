@@ -277,30 +277,18 @@ async function productionCsp(): Promise<Map<string, string[]>> {
 }
 
 describe("content security policy", () => {
-  it("allows the hosts Google Ads loads conversion scripts from", async () => {
-    const scriptSrc = (await productionCsp()).get("script-src") ?? [];
+  it("does not allow third-party analytics or ads hosts", async () => {
+    const directives = await productionCsp();
+    const sources = [
+      ...(directives.get("script-src") ?? []),
+      ...(directives.get("connect-src") ?? []),
+      ...(directives.get("img-src") ?? []),
+    ];
 
-    expect(scriptSrc).toContain("https://www.googletagmanager.com");
-    expect(scriptSrc).toContain("https://www.googleadservices.com");
-    expect(scriptSrc).toContain("https://googleads.g.doubleclick.net");
-  });
-
-  it("allows the hosts Google Ads pings conversions to over fetch", async () => {
-    const connectSrc = (await productionCsp()).get("connect-src") ?? [];
-
-    expect(connectSrc).toContain("https://www.googleadservices.com");
-    expect(connectSrc).toContain("https://googleads.g.doubleclick.net");
-    expect(connectSrc).toContain("https://ad.doubleclick.net");
-    expect(connectSrc).toContain("https://www.google.com");
-    expect(connectSrc).toContain("https://pagead2.googlesyndication.com");
-  });
-
-  it("allows the hosts Google Ads falls back to pixel pings on", async () => {
-    const imgSrc = (await productionCsp()).get("img-src") ?? [];
-
-    expect(imgSrc).toContain("https://www.googleadservices.com");
-    expect(imgSrc).toContain("https://googleads.g.doubleclick.net");
-    expect(imgSrc).toContain("https://www.google.com");
-    expect(imgSrc).toContain("https://pagead2.googlesyndication.com");
+    expect(sources).not.toContain("https://www.googletagmanager.com");
+    expect(sources).not.toContain("https://www.googleadservices.com");
+    expect(sources).not.toContain("https://www.google-analytics.com");
+    expect(sources).not.toContain("https://cdn.visitors.now");
+    expect(sources).not.toContain("https://e.visitors.now");
   });
 });

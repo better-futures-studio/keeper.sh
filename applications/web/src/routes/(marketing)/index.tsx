@@ -53,7 +53,6 @@ import { TESTIMONIALS } from '../../features/marketing/testimonials'
 import { GithubStarButton } from '../../components/ui/primitives/github-star-button'
 import { latestArticles } from '../../lib/article-library'
 import { calendarEmphasizedAtom } from '../../state/calendar-emphasized'
-import { ANALYTICS_EVENTS } from '../../lib/analytics'
 import { useSignupEntry } from '../../features/marketing/signup-entry'
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
 import ArrowUpRightIcon from "lucide-react/dist/esm/icons/arrow-up-right";
@@ -205,8 +204,6 @@ function MarketingPage() {
             size="compact"
             onMouseEnter={() => setEmphasized(true)}
             onMouseLeave={() => setEmphasized(false)}
-            data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked}
-            data-visitors-cta="hero"
           >
             <ButtonText>Sync Calendars</ButtonText>
             <ButtonIcon>
@@ -387,7 +384,7 @@ function MarketingPage() {
                 Free for two calendar accounts. No credit card.
               </Text>
               <div className="flex items-center gap-2 mt-2">
-                <LinkButton to={signupPath} size="compact" variant="inverse" data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked} data-visitors-cta="bottom">
+                <LinkButton to={signupPath} size="compact" variant="inverse">
                   <ButtonText>Sync Calendars</ButtonText>
                   <ButtonIcon>
                     <ArrowRightIcon size={16} />

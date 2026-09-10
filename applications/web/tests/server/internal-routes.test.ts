@@ -42,30 +42,6 @@ const serverConfig: ServerConfig = {
   vitePort: 4001,
 };
 
-function geoRequest(headers: Record<string, string> = {}): Request {
-  return new Request("http://localhost/internal/geo", { headers });
-}
-
-describe("/internal/geo", () => {
-  it("reports that GDPR applies for an EU country", async () => {
-    const response = await handleInternalRoute(geoRequest({ "cf-ipcountry": "DE" }), serverConfig);
-
-    expect(await response?.json()).toEqual({ gdprApplies: true });
-  });
-
-  it("reports that GDPR does not apply outside the EU", async () => {
-    const response = await handleInternalRoute(geoRequest({ "cf-ipcountry": "US" }), serverConfig);
-
-    expect(await response?.json()).toEqual({ gdprApplies: false });
-  });
-
-  it("is never stored by a shared cache", async () => {
-    const response = await handleInternalRoute(geoRequest({ "cf-ipcountry": "US" }), serverConfig);
-
-    expect(response?.headers.get("cache-control")).toBe("private, no-store");
-  });
-});
-
 function serverCardRequest(headers: Record<string, string> = {}): Request {
   return new Request("http://localhost/mcp/server-card", { headers });
 }

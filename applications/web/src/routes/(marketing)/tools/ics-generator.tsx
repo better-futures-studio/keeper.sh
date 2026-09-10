@@ -300,7 +300,6 @@ function IcsGeneratorPage() {
       <MarketingToolCta
         title="Building calendar files by hand?"
         body="Keeper.sh copies your events between Google Calendar, Outlook, iCloud, Fastmail and any CalDAV server, so nothing needs a file moved around by hand."
-        source="ics-generator"
       />
     </div>
   );

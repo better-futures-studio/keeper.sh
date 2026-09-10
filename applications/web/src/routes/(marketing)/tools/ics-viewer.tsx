@@ -227,7 +227,6 @@ function IcsViewerPage() {
       <MarketingToolCta
         title="Reading calendar files to find a conflict?"
         body="Keeper.sh copies your events between Google Calendar, Outlook, iCloud, Fastmail and any CalDAV server, so a clash shows up in the calendar itself."
-        source="ics-viewer"
       />
     </div>
   );

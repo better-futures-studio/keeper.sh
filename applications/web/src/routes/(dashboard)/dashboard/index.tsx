@@ -13,7 +13,6 @@ import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
 import User from "lucide-react/dist/esm/icons/user";
 import { ErrorState } from "@/components/ui/primitives/error-state";
 import { signOut } from "@/lib/auth";
-import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { apiFetch, fetcher } from "@/lib/fetcher";
 import { invalidateAccountsAndSources } from "@/lib/swr";
 import { resolveErrorMessage } from "@/utils/errors";
@@ -74,7 +73,6 @@ function DashboardPage() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    track(ANALYTICS_EVENTS.logout);
     await signOut();
     navigate({ to: "/" });
   };
@@ -162,7 +160,6 @@ function CalendarSourcesMenu() {
       try {
         const response = await apiFetch("/api/accounts/refresh-calendars", { method: "POST" });
         const result = refreshCalendarsResponseSchema.assert(await response.json());
-        track(ANALYTICS_EVENTS.calendars_refreshed, { accounts: result.accounts });
         await invalidateAccountsAndSources(globalMutate);
         startCooldown(result.cooldownSeconds);
 

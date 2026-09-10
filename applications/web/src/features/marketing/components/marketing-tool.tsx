@@ -3,7 +3,6 @@ import { Heading2 } from "@/components/ui/primitives/heading";
 import { Text } from "@/components/ui/primitives/text";
 import { ButtonIcon, ButtonText, LinkButton } from "@/components/ui/primitives/button";
 import { MarketingCtaCard, MarketingCtaSection } from "@/features/marketing/components/marketing-cta";
-import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
 import { useSignupEntry } from "../signup-entry";
 
@@ -46,10 +45,9 @@ export function MarketingToolActions({ children }: PropsWithChildren) {
 type MarketingToolCtaProps = {
   title: string;
   body: string;
-  source: string;
 };
 
-export function MarketingToolCta({ title, body, source }: MarketingToolCtaProps) {
+export function MarketingToolCta({ title, body }: MarketingToolCtaProps) {
   const { signupPath } = useSignupEntry();
 
   return (
@@ -64,8 +62,6 @@ export function MarketingToolCta({ title, body, source }: MarketingToolCtaProps)
             to={signupPath}
             size="compact"
             variant="inverse"
-            data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked}
-            data-visitors-cta={source}
           >
             <ButtonText>Start Syncing Calendars</ButtonText>
             <ButtonIcon>

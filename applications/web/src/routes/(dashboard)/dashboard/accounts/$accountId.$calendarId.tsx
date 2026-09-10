@@ -17,7 +17,6 @@ import { MetadataRow } from "@/features/dashboard/components/metadata-row";
 import { ProviderIcon } from "@/components/ui/primitives/provider-icon";
 import { DashboardHeading1, DashboardSection } from "@/components/ui/primitives/dashboard-heading";
 import { apiFetch, fetcher } from "@/lib/fetcher";
-import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { serializedPatch, serializedCall } from "@/lib/serialized-mutate";
 import { invalidateAccountsAndSources } from "@/lib/swr";
 import { formatDate } from "@/lib/time";
@@ -251,7 +250,6 @@ function SyncRangeItem({
       return;
     }
 
-    track(ANALYTICS_EVENTS.calendar_setting_toggled, { field, value: range });
     store.set(calendarDetailAtom, (previous) => (
       previous ? { ...previous, [field]: range } : previous
     ));
@@ -375,7 +373,6 @@ function RenameItem({ calendarId }: { calendarId: string }) {
     <NavigationMenuEditableItem
       value={name}
       onCommit={(newName) => {
-        track(ANALYTICS_EVENTS.calendar_renamed);
         store.set(calendarDetailAtom, (prev) => (prev ? { ...prev, name: newName } : prev));
         patchSource(store, calendarId, { name: newName });
       }}
@@ -451,7 +448,6 @@ function DeleteCalendarSection({ accountId, calendarId }: { accountId: string; c
     startDeleteTransition(async () => {
       try {
         await apiFetch(`/api/sources/${calendarId}`, { method: "DELETE" });
-        track(ANALYTICS_EVENTS.source_calendar_deleted);
         await invalidateAccountsAndSources(globalMutate, `/api/accounts/${accountId}`);
         navigate({ to: `/dashboard/accounts/${accountId}` });
       } catch (err) {
@@ -560,7 +556,6 @@ function DestinationCheckboxItem({
 
     const currentIds = store.get(destinationIdsAtom);
     const willCheck = !currentIds.has(destinationId);
-    track(ANALYTICS_EVENTS.destination_toggled, { enabled: willCheck });
     const updatedSet = new Set(currentIds);
 
     if (willCheck) {
@@ -691,10 +686,6 @@ function TreatFullDayTimedEventsToggle({ calendarId, locked }: { calendarId: str
     if (!current) return;
 
     const treatFullDayTimedEventsAsAllDay = !current.treatFullDayTimedEventsAsAllDay;
-    track(ANALYTICS_EVENTS.calendar_setting_toggled, {
-      field: "treatFullDayTimedEventsAsAllDay",
-      enabled: treatFullDayTimedEventsAsAllDay,
-    });
     store.set(calendarDetailAtom, (prev) => {
       if (!prev) {
         return prev;
@@ -802,7 +793,6 @@ function SyncEventNameToggle({ calendarId, locked }: { calendarId: string; locke
       ? { excludeEventName: false, customEventName: "{{event_name}}" }
       : { excludeEventName: true, customEventName: "{{calendar_name}}" };
 
-    track(ANALYTICS_EVENTS.calendar_setting_toggled, { field: "excludeEventName", enabled: !current.excludeEventName });
     store.set(calendarDetailAtom, (prev) => (prev ? { ...prev, ...patch } : prev));
     patchSource(store, calendarId, patch);
   };
@@ -891,7 +881,6 @@ function ExcludeFieldToggle({
     if (!current) return;
 
     const newValue = !current[field];
-    track(ANALYTICS_EVENTS.calendar_setting_toggled, { field, enabled: newValue });
     store.set(calendarDetailAtom, (prev) => (prev ? { ...prev, [field]: newValue } : prev));
     patchSource(store, calendarId, { [field]: newValue });
   };

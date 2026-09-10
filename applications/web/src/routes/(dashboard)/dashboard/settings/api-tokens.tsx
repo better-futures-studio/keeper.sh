@@ -13,7 +13,6 @@ import {
   createApiToken,
   deleteApiToken,
 } from "@/hooks/use-api-tokens";
-import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import type { ApiToken } from "@/hooks/use-api-tokens";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import {
@@ -81,7 +80,6 @@ function ApiTokensPage() {
           revalidate: false,
         },
       );
-      track(ANALYTICS_EVENTS.api_token_deleted);
     } catch (err) {
       setMutationError(resolveErrorMessage(err, "Failed to delete token."));
     }
@@ -242,7 +240,6 @@ function CreateTokenButton({
     setIsCreating(true);
     try {
       const result = await createApiToken(name);
-      track(ANALYTICS_EVENTS.api_token_created);
       setCreateOpen(false);
       onCreated(result.token);
     } catch (err) {

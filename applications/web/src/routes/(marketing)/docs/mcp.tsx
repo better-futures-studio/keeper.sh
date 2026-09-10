@@ -28,7 +28,6 @@ import {
   REST_FREE_TIME_SNIPPET,
 } from "@/features/marketing/mcp-documentation";
 import { jsonLdScript, seoHead, webPageSchema, breadcrumbSchema, breadcrumbTrail } from "@/lib/seo";
-import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import { useSignupEntry } from "@/features/marketing/signup-entry";
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
 import ArrowUpRightIcon from "lucide-react/dist/esm/icons/arrow-up-right";
@@ -354,8 +353,6 @@ function McpDocumentationPage() {
               to={signupPath}
               size="compact"
               variant="inverse"
-              data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked}
-              data-visitors-cta="docs-mcp"
             >
               <ButtonText>Get Started</ButtonText>
               <ButtonIcon>

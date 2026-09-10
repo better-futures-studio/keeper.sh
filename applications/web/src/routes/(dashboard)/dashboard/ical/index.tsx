@@ -30,7 +30,6 @@ import { useEntitlements, useMutateEntitlements } from "@/hooks/use-entitlements
 import { canCreateFeed } from "@/utils/ical-feeds";
 import { fetcher } from "@/lib/fetcher";
 import { pluralize } from "@/lib/pluralize";
-import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { resolveErrorMessage } from "@/utils/errors";
 
 export const Route = createFileRoute("/(dashboard)/dashboard/ical/")({
@@ -137,7 +136,6 @@ function CreateFeedItem({
     setIsCreating(true);
     try {
       const created = await createIcalFeed(name);
-      track(ANALYTICS_EVENTS.ical_feed_created);
       setCreateOpen(false);
       await onCreated();
       await navigate({ to: "/dashboard/ical/$feedId", params: { feedId: created.id } });

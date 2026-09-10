@@ -8,7 +8,6 @@ import { ButtonText, LinkButton } from '../../components/ui/primitives/button';
 import { SessionSlot } from '../../components/ui/shells/session-slot';
 import HeartIcon from "lucide-react/dist/esm/icons/heart";
 import { ExternalTextLink } from "@/components/ui/primitives/text-link";
-import { CookieConsent } from "@/components/consent-banner";
 import { fetchAuthCapabilitiesWithApi, offersSeparateSignup, type AuthCapabilities } from "@/lib/auth-capabilities";
 
 interface GithubStarsLoaderData {
@@ -148,7 +147,6 @@ function MarketingLayout() {
         </MarketingFooter>
       </LayoutItem>
     </Layout>
-    <CookieConsent />
     </>
   )
 }

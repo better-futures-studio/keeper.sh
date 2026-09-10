@@ -69,10 +69,6 @@ body {
   display: none;
 }
 
-[data-consent="resolved"] [data-consent-banner] {
-  display: none;
-}
-
 html {
   color-scheme: light;
 }

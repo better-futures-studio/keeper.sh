@@ -6,7 +6,6 @@ import Copy from "lucide-react/dist/esm/icons/copy";
 import Trash2 from "lucide-react/dist/esm/icons/trash-2";
 import { icalFeedNameSchema } from "@keeper.sh/data-schemas";
 import { apiFetch, fetcher } from "@/lib/fetcher";
-import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { serializedPatch } from "@/lib/serialized-mutate";
 import { formatDate } from "@/lib/time";
 import { BackButton } from "@/components/ui/primitives/back-button";
@@ -144,24 +143,18 @@ function ICalFeedDetailPage() {
   const handleToggleSetting = (field: ToggleField) => {
     if (locked) return;
     const enabled = !feed[field];
-    track(ANALYTICS_EVENTS.ical_setting_toggled, { field, enabled });
     patchFeed({ [field]: enabled });
   };
 
   const handleToggleEventName = () => {
     if (locked) return;
     const patch = resolveEventNamePatch(!feed.includeEventName);
-    track(ANALYTICS_EVENTS.ical_setting_toggled, {
-      field: "includeEventName",
-      enabled: patch.includeEventName,
-    });
     patchFeed(patch);
   };
 
   const handleToggleCalendar = async (calendarId: string, checked: boolean) => {
     const calendarIds = resolveCalendarSelection(selected, calendarId, checked);
 
-    track(ANALYTICS_EVENTS.ical_source_toggled, { enabled: checked, feedId });
     setMutationError(null);
     try {
       await mutateCalendars(
@@ -186,7 +179,6 @@ function ICalFeedDetailPage() {
     setMutationError(null);
     try {
       await deleteIcalFeed(feedId);
-      track(ANALYTICS_EVENTS.ical_feed_deleted);
       await revalidateEntitlements();
       await navigate({ to: "/dashboard/ical" });
     } catch (err) {
@@ -336,7 +328,6 @@ function FeedLinkField({
       onError("Failed to copy this feed's link. Select it above to copy it manually.");
       return;
     }
-    track(ANALYTICS_EVENTS.ical_link_copied);
     markCopied();
   };
 

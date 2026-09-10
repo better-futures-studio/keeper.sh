@@ -5,7 +5,6 @@ import Plus from "lucide-react/dist/esm/icons/plus";
 import { Button, ButtonText } from "@/components/ui/primitives/button";
 import { BackButton } from "@/components/ui/primitives/back-button";
 import { usePasskeys, addPasskey, deletePasskey } from "@/hooks/use-passkeys";
-import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import type { Passkey } from "@/hooks/use-passkeys";
 import { formatDateShort } from "@/lib/time";
 import {
@@ -62,7 +61,6 @@ function PasskeysPage() {
           revalidate: false,
         },
       );
-      track(ANALYTICS_EVENTS.passkey_deleted);
     } catch (err) {
       setMutationError(resolveErrorMessage(err, "Failed to delete passkey."));
     }
@@ -121,7 +119,6 @@ function AddPasskeyButton({
     setIsMutating(true);
     try {
       await addPasskey();
-      track(ANALYTICS_EVENTS.passkey_created);
       await mutate();
     } catch (err) {
       onError(resolveErrorMessage(err, "Failed to add passkey."));

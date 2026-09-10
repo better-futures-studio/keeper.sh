@@ -1,21 +1,13 @@
 interface PublicRuntimeConfig {
   commercialMode: boolean;
-  googleAdsConversionLabel: string | null;
-  googleAdsId: string | null;
-  googleAdsSignupConversionLabel: string | null;
   polarProMonthlyProductId: string | null;
   polarProYearlyProductId: string | null;
-  visitorsNowToken: string | null;
 }
 
 interface RuntimeConfigSource {
   commercialMode?: boolean | null;
-  googleAdsConversionLabel?: string | null;
-  googleAdsId?: string | null;
-  googleAdsSignupConversionLabel?: string | null;
   polarProMonthlyProductId?: string | null;
   polarProYearlyProductId?: string | null;
-  visitorsNowToken?: string | null;
 }
 
 const normalizeOptionalValue = (value: string | null | undefined): string | null => {
@@ -37,16 +29,8 @@ const getServerPublicRuntimeConfig = (
 
   return {
     commercialMode: environment.COMMERCIAL_MODE === "true",
-    googleAdsConversionLabel: normalizeOptionalValue(
-      environment.VITE_GOOGLE_ADS_CONVERSION_LABEL,
-    ),
-    googleAdsId: normalizeOptionalValue(environment.VITE_GOOGLE_ADS_ID),
-    googleAdsSignupConversionLabel: normalizeOptionalValue(
-      environment.VITE_GOOGLE_ADS_SIGNUP_CONVERSION_LABEL,
-    ),
     polarProMonthlyProductId: normalizeOptionalValue(environment.POLAR_PRO_MONTHLY_PRODUCT_ID),
     polarProYearlyProductId: normalizeOptionalValue(environment.POLAR_PRO_YEARLY_PRODUCT_ID),
-    visitorsNowToken: normalizeOptionalValue(environment.VITE_VISITORS_NOW_TOKEN),
   };
 };
 
@@ -60,12 +44,8 @@ const getWindowPublicRuntimeConfig = (): RuntimeConfigSource => {
 
 const resolvePublicRuntimeConfig = (source: RuntimeConfigSource): PublicRuntimeConfig => ({
   commercialMode: source.commercialMode === true,
-  googleAdsConversionLabel: normalizeOptionalValue(source.googleAdsConversionLabel),
-  googleAdsId: normalizeOptionalValue(source.googleAdsId),
-  googleAdsSignupConversionLabel: normalizeOptionalValue(source.googleAdsSignupConversionLabel),
   polarProMonthlyProductId: normalizeOptionalValue(source.polarProMonthlyProductId),
   polarProYearlyProductId: normalizeOptionalValue(source.polarProYearlyProductId),
-  visitorsNowToken: normalizeOptionalValue(source.visitorsNowToken),
 });
 
 const getPublicRuntimeConfig = (): PublicRuntimeConfig => resolvePublicRuntimeConfig(

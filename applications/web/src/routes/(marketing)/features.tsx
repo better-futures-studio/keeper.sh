@@ -28,7 +28,6 @@ import { HowItWorksSync } from "@/illustrations/how-it-works-sync";
 import { HOW_IT_WORKS_STEPS } from "@/features/marketing/how-it-works-steps";
 import { jsonLdScript, seoHead, webPageSchema, breadcrumbSchema, breadcrumbTrail } from "@/lib/seo";
 import { Breadcrumb } from "@/components/ui/primitives/breadcrumb";
-import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import { useSignupEntry } from "@/features/marketing/signup-entry";
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
 import ArrowUpRightIcon from "lucide-react/dist/esm/icons/arrow-up-right";
@@ -184,8 +183,6 @@ function FeaturesPage() {
               to={signupPath}
               size="compact"
               variant="inverse"
-              data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked}
-              data-visitors-cta="features"
             >
               <ButtonText>Get Started</ButtonText>
               <ButtonIcon>
