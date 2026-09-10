@@ -42,10 +42,11 @@ describe("resolveAffectedCalendarIds", () => {
 
   it("fans an account-scoped row out to its live pull calendars only", async () => {
     const listAccountCalendars = vi.fn(() => Promise.resolve([
-      { capabilities: ["pull"], disabled: false, id: "cal-a" },
-      { capabilities: ["pull", "push"], disabled: false, id: "cal-b" },
-      { capabilities: ["pull"], disabled: true, id: "cal-disabled" },
-      { capabilities: ["pull"], disabled: false, id: "cal-c" },
+      { capabilities: ["pull"], disabled: false, hidden: false, id: "cal-a" },
+      { capabilities: ["pull", "push"], disabled: false, hidden: false, id: "cal-b" },
+      { capabilities: ["pull"], disabled: true, hidden: false, id: "cal-disabled" },
+      { capabilities: ["pull"], disabled: false, hidden: true, id: "cal-hidden" },
+      { capabilities: ["pull"], disabled: false, hidden: false, id: "cal-c" },
     ]));
 
     await expect(resolveAffectedCalendarIds(
@@ -57,7 +58,7 @@ describe("resolveAffectedCalendarIds", () => {
 
   it("excludes account calendars that lost the pull capability", async () => {
     const listAccountCalendars = vi.fn(() => Promise.resolve([
-      { capabilities: ["push"], disabled: false, id: "cal-push-only" },
+      { capabilities: ["push"], disabled: false, hidden: false, id: "cal-push-only" },
     ]));
 
     await expect(resolveAffectedCalendarIds(

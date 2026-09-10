@@ -5,6 +5,7 @@ import {
   handlePutSourceDestinationsRoute,
   handlePutSourcesForDestinationRoute,
 } from "../../../../../src/routes/api/sources/[id]/mapping-routes";
+import { CALENDAR_HIDDEN_MESSAGE } from "@/utils/calendar-hidden";
 import { MAPPING_LIMIT_ERROR_MESSAGE } from "@/utils/source-destination-mappings";
 
 const readJson = (response: Response): Promise<unknown> => response.json();
@@ -96,6 +97,25 @@ describe("handlePutSourceDestinationsRoute", () => {
     expect(response.status).toBe(400);
     expect(await readJson(response)).toEqual({
       error: "Some destination calendars not found",
+    });
+  });
+
+  it("returns 400 with message when a calendar is hidden", async () => {
+    const response = await handlePutSourceDestinationsRoute(
+      {
+        body: { calendarIds: ["dest-1"] },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        setDestinationsForSource: () =>
+          Promise.reject(new Error(CALENDAR_HIDDEN_MESSAGE)),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(await readJson(response)).toEqual({
+      message: CALENDAR_HIDDEN_MESSAGE,
     });
   });
 

@@ -503,7 +503,7 @@ function DestinationsSection({ calendarId }: { calendarId: string }) {
   const atLimit = !canAddMore(entitlements?.mappings);
 
   const pushCalendars = useMemo(
-    () => (allCalendars ?? []).filter((calendar) => canPush(calendar) && calendar.id !== calendarId),
+    () => (allCalendars ?? []).filter((calendar) => canPush(calendar) && !calendar.hidden && calendar.id !== calendarId),
     [allCalendars, calendarId],
   );
 

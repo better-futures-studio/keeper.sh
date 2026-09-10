@@ -1,6 +1,8 @@
 import { ErrorResponse } from "@/utils/responses";
 import { calendarIdsBodySchema } from "@/utils/request-body";
 import { idParamSchema } from "@/utils/request-query";
+import { HTTP_STATUS } from "@keeper.sh/constants";
+import { CALENDAR_HIDDEN_MESSAGE } from "@/utils/calendar-hidden";
 import { MAPPING_LIMIT_ERROR_MESSAGE } from "@/utils/source-destination-mappings";
 
 interface MappingRouteContext {
@@ -67,6 +69,10 @@ const mapMappingDomainError = (
 
   if (error.message === MAPPING_LIMIT_ERROR_MESSAGE) {
     return ErrorResponse.paymentRequired(error.message).toResponse();
+  }
+
+  if (error.message === CALENDAR_HIDDEN_MESSAGE) {
+    return Response.json({ message: CALENDAR_HIDDEN_MESSAGE }, { status: HTTP_STATUS.BAD_REQUEST });
   }
 
   return null;

@@ -165,6 +165,7 @@ describe("planCalendarRediscovery", () => {
     const serialized = JSON.stringify(plan);
     for (const forbidden of [
       "disabled",
+      "hidden",
       "failureCount",
       "lastFailureAt",
       "nextAttemptAt",

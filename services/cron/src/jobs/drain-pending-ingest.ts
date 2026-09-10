@@ -51,8 +51,8 @@ const parsePendingMembers = (entries: string[]): PendingIngestMember[] => {
 
 const createDefaultDependencies = async (): Promise<DrainPendingIngestDependencies> => {
   const { database, premiumService, refreshLockRedis } = await import("@/context");
-  const { calendarsTable } = await import("@keeper.sh/database/schema");
-  const { and, arrayContains, eq, inArray } = await import("drizzle-orm");
+  const { calendarIsSyncable, calendarsTable } = await import("@keeper.sh/database/schema");
+  const { and, arrayContains, inArray } = await import("drizzle-orm");
   const { ingestOAuthSources } = await import("@/jobs/ingest-sources");
   const { enqueueDestinationSyncsForUsers } = await import("@/utils/enqueue-destination-syncs");
   const { default: environment } = await import("@/env");
@@ -126,7 +126,7 @@ const createDefaultDependencies = async (): Promise<DrainPendingIngestDependenci
       .from(calendarsTable)
       .where(and(
         inArray(calendarsTable.id, calendarIds),
-        eq(calendarsTable.disabled, false),
+        calendarIsSyncable,
         arrayContains(calendarsTable.capabilities, ["pull"]),
       )),
     resolvePlan: (userId) => premiumService.getUserPlan(userId),

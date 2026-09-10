@@ -15,6 +15,7 @@ const EVENT_FILTER_FIELDS = [
 
 const SOURCE_BOOLEAN_UPDATE_FIELDS = [
   ...EVENT_FILTER_FIELDS,
+  "hidden",
   "includeInIcalFeed",
   "treatFullDayTimedEventsAsAllDay",
 ] as const;

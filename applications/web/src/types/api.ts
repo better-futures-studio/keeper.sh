@@ -37,6 +37,7 @@ export interface CalendarSource {
   unavailableSince: string | null;
   disabled: boolean;
   providerMissingSince: string | null;
+  hidden: boolean;
 }
 
 export interface CalendarDetail {

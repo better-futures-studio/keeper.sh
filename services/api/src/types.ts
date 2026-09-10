@@ -28,6 +28,7 @@ interface KeeperSource {
   includeInIcalFeed: boolean;
   unavailableSince: Date | null;
   disabled: boolean;
+  hidden: boolean;
   providerMissingSince: string | null;
   providerName: string;
   providerIcon: string | null;

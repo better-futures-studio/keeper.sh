@@ -542,6 +542,7 @@ describe("applyCalendarRediscoveryPlan", () => {
 
     for (const forbidden of [
       "disabled",
+      "hidden",
       "failureCount",
       "lastFailureAt",
       "nextAttemptAt",

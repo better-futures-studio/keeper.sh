@@ -163,6 +163,27 @@ describe("handlePatchSourceRoute", () => {
     expect(response.status).toBe(403);
   });
 
+  it("passes hidden through without a Pro gate", async () => {
+    let receivedUpdates: Record<string, unknown> = {};
+    const response = await handlePatchSourceRoute(
+      {
+        body: { hidden: true },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(false),
+        updateSource: (_userId, _sourceId, updates) => {
+          receivedUpdates = updates;
+          return Promise.resolve({ id: "source-1", ...updates });
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(receivedUpdates).toEqual({ hidden: true });
+  });
+
   it("returns updated source when pro user sets markEventsAsPrivate", async () => {
     const response = await handlePatchSourceRoute(
       {

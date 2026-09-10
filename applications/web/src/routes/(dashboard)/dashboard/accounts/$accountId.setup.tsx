@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { BackButton } from "@/components/ui/primitives/back-button";
 import { PremiumHint } from "@/components/ui/primitives/menu-hint";
 import { DashboardSection } from "@/components/ui/primitives/dashboard-heading";
 import { Button, LinkButton, ButtonText } from "@/components/ui/primitives/button";
+import { Text } from "@/components/ui/primitives/text";
 import { apiFetch } from "@/lib/fetcher";
 import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { useEntitlements, useMutateEntitlements, canAddMore } from "@/hooks/use-entitlements";
+import { resolveErrorMessage } from "@/utils/errors";
 import type { CalendarSource } from "@/types/api";
 import {
   NavigationMenu,
@@ -329,7 +331,12 @@ function SelectSection({
   calendars: CalendarSource[];
 }) {
   const navigate = useNavigate();
-  const [localSelectedIds, setLocalSelectedIds] = useState<Set<string>>(new Set());
+  const { mutate: globalMutate } = useSWRConfig();
+  const [localSelectedIds, setLocalSelectedIds] = useState<Set<string>>(
+    () => new Set(calendars.map((calendar) => calendar.id)),
+  );
+  const [isSaving, startSaveTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const handleToggle = (calendarId: string, checked: boolean) => {
     setLocalSelectedIds((prev) => {
@@ -344,19 +351,34 @@ function SelectSection({
   };
 
   const handleNext = () => {
-    track(ANALYTICS_EVENTS.setup_step_completed, { step: "select" });
-    navigate({
-      to: "/dashboard/accounts/$accountId/setup",
-      params: { accountId },
-      search: { step: "rename", id: [...localSelectedIds].join(",") },
+    setError(null);
+    const calendarIds = [...localSelectedIds];
+
+    startSaveTransition(async () => {
+      try {
+        await apiFetch(`/api/sources/accounts/${accountId}/selection`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ calendarIds }),
+        });
+        await globalMutate("/api/sources");
+        track(ANALYTICS_EVENTS.setup_step_completed, { step: "select" });
+        navigate({
+          to: "/dashboard/accounts/$accountId/setup",
+          params: { accountId },
+          search: { step: "rename", id: calendarIds.join(",") },
+        });
+      } catch (err) {
+        setError(resolveErrorMessage(err, "Failed to save your calendar selection."));
+      }
     });
   };
 
   return (
     <>
       <DashboardSection
-        title="Which calendars would you like to configure?"
-        description="Select the calendars you want to rename and set up."
+        title="Choose calendars to import"
+        description="Unchecked calendars stay hidden: Keeper won't sync them or offer them for mapping. Change this anytime from the account page."
       />
       <NavigationMenu>
         {calendars.map((calendar) => (
@@ -372,16 +394,18 @@ function SelectSection({
               />
             </NavigationMenuItemIcon>
             <NavigationMenuItemLabel>{calendar.name}</NavigationMenuItemLabel>
+            <Text size="sm" tone="muted">{calendar.providerName}</Text>
           </NavigationMenuCheckboxItem>
         ))}
       </NavigationMenu>
+      {error && <Text size="sm" tone="danger" className="px-0.5">{error}</Text>}
       <div className="flex flex-col gap-1.5">
         <Button
           className="w-full justify-center"
-          disabled={localSelectedIds.size === 0}
+          disabled={localSelectedIds.size === 0 || isSaving}
           onClick={handleNext}
         >
-          <ButtonText>Next</ButtonText>
+          <ButtonText>{isSaving ? "Saving…" : "Continue"}</ButtonText>
         </Button>
         <LinkButton
           to="/dashboard"
@@ -488,7 +512,7 @@ function DestinationsSection({
   const atLimit = !canAddMore(entitlements?.mappings);
 
   const pushCalendars = allCalendars.filter(
-    (candidate) => canPush(candidate) && candidate.id !== calendar.id,
+    (candidate) => canPush(candidate) && !candidate.hidden && candidate.id !== calendar.id,
   );
 
   return (
@@ -552,7 +576,7 @@ function SourcesSection({
   const atLimit = !canAddMore(entitlements?.mappings);
 
   const pullCalendars = allCalendars.filter(
-    (candidate) => canPull(candidate) && candidate.id !== calendar.id,
+    (candidate) => canPull(candidate) && !candidate.hidden && candidate.id !== calendar.id,
   );
 
   return (

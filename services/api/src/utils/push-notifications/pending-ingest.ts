@@ -1,5 +1,5 @@
 import { and, arrayContains, eq } from "drizzle-orm";
-import { calendarPushChannelsTable, calendarsTable } from "@keeper.sh/database/schema";
+import { calendarIsSyncable, calendarPushChannelsTable, calendarsTable } from "@keeper.sh/database/schema";
 import {
   buildUnknownChannelKey,
   PENDING_CORRELATION_KEY,
@@ -138,12 +138,13 @@ const createPushWebhookDependencies = async (
           .select({
             capabilities: calendarsTable.capabilities,
             disabled: calendarsTable.disabled,
+            hidden: calendarsTable.hidden,
             id: calendarsTable.id,
           })
           .from(calendarsTable)
           .where(and(
             eq(calendarsTable.accountId, accountId),
-            eq(calendarsTable.disabled, false),
+            calendarIsSyncable,
             arrayContains(calendarsTable.capabilities, ["pull"]),
           )),
       });

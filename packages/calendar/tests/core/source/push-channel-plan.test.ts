@@ -18,6 +18,7 @@ const makeCalendar = (
   calendarId: "cal-1",
   capabilities: ["pull"],
   disabled: false,
+  hidden: false,
   externalCalendarId: "external-1",
   needsReauthentication: false,
   provider: "google",
@@ -133,6 +134,12 @@ describe("planPushChannelActions eligibility", () => {
       channels: [makeChannel()],
     });
     expect(disabled.map((action) => action.type)).toEqual(["deregister"]);
+
+    const hidden = await plan({
+      calendars: [makeCalendar({ hidden: true })],
+      channels: [makeChannel()],
+    });
+    expect(hidden.map((action) => action.type)).toEqual(["deregister"]);
 
     const noPull = await plan({
       calendars: [makeCalendar({ capabilities: ["push"] })],

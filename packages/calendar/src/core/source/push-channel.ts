@@ -52,6 +52,7 @@ interface EligibleSourceCalendar {
   capabilities: string[];
   disabled: boolean;
   externalCalendarId: string | null;
+  hidden: boolean;
   needsReauthentication: boolean;
   provider: string;
   providerAccountId: string | null;
@@ -109,6 +110,7 @@ interface RegistrarContext {
 interface AccountCalendarRow {
   capabilities: string[];
   disabled: boolean;
+  hidden: boolean;
   id: string;
 }
 
@@ -191,7 +193,7 @@ const toPushChannelState = (state: string): PushChannelState =>
   pushChannelStateSchema.assert(state);
 
 const isPullCalendar = (calendar: EligibleSourceCalendar): boolean =>
-  !calendar.disabled && calendar.capabilities.includes(PULL_CAPABILITY);
+  !calendar.disabled && !calendar.hidden && calendar.capabilities.includes(PULL_CAPABILITY);
 
 /*
  * A registration that never got an answer out of the provider leaves a row holding no
@@ -267,7 +269,8 @@ const resolveAffectedCalendarIds = async (
 
   const calendars = await dependencies.listAccountCalendars(channel.accountId);
   return calendars
-    .filter((calendar) => !calendar.disabled && calendar.capabilities.includes(PULL_CAPABILITY))
+    .filter((calendar) =>
+      !calendar.disabled && !calendar.hidden && calendar.capabilities.includes(PULL_CAPABILITY))
     .map((calendar) => calendar.id);
 };
 

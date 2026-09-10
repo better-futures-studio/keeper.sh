@@ -15,11 +15,12 @@ interface DeleteConfirmationProps {
   onOpenChange: (open: boolean) => void;
   deleting: boolean;
   onConfirm: () => void;
-}
-
-function resolveDeleteLabel(deleting: boolean): string {
-  if (deleting) return "Deleting...";
-  return "Delete";
+  /** Confirm button label while idle. Defaults to "Delete". */
+  confirmLabel?: string;
+  /** Confirm button label while `deleting` is true. Defaults to "Deleting...". */
+  pendingLabel?: string;
+  /** Confirm button variant. Defaults to "destructive". */
+  variant?: "destructive" | "highlight";
 }
 
 export function DeleteConfirmation({
@@ -29,6 +30,9 @@ export function DeleteConfirmation({
   onOpenChange,
   deleting,
   onConfirm,
+  confirmLabel = "Delete",
+  pendingLabel = "Deleting...",
+  variant = "destructive",
 }: DeleteConfirmationProps) {
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
@@ -36,9 +40,9 @@ export function DeleteConfirmation({
         <ModalTitle>{title}</ModalTitle>
         <ModalDescription>{description}</ModalDescription>
         <ModalFooter>
-          <Button variant="destructive" className="w-full justify-center" onClick={onConfirm} disabled={deleting}>
+          <Button variant={variant} className="w-full justify-center" onClick={onConfirm} disabled={deleting}>
             {deleting && <LoaderCircle size={16} className="animate-spin" />}
-            <ButtonText>{resolveDeleteLabel(deleting)}</ButtonText>
+            <ButtonText>{deleting ? pendingLabel : confirmLabel}</ButtonText>
           </Button>
           <Button variant="elevated" className="w-full justify-center" onClick={() => onOpenChange(false)}>
             <ButtonText>Cancel</ButtonText>

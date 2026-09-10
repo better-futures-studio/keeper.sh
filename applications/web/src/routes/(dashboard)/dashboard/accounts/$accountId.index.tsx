@@ -10,13 +10,14 @@ import { Pagination, PaginationPrevious, PaginationNext } from "@/components/ui/
 import { RouteShell } from "@/components/ui/shells/route-shell";
 import { Text } from "@/components/ui/primitives/text";
 import { MenuGate } from "@/components/ui/primitives/menu-hint";
+import { Collapsible } from "@/components/ui/primitives/collapsible";
 import { MetadataRow } from "@/features/dashboard/components/metadata-row";
 import { useReauthAccounts } from "@/features/dashboard/components/reauth/use-reauth-accounts";
 import { fetcher, apiFetch } from "@/lib/fetcher";
 import { track, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { formatDate } from "@/lib/time";
-import { invalidateAccountsAndSources } from "@/lib/swr";
-import type { CalendarAccount, CalendarSource } from "@/types/api";
+import { invalidateAccountsAndSources, setCalendarHidden } from "@/lib/swr";
+import type { CalendarAccount, CalendarDetail, CalendarSource } from "@/types/api";
 import {
   NavigationMenu,
   NavigationMenuEmptyItem,
@@ -37,30 +38,95 @@ export const Route = createFileRoute(
   component: AccountDetailPage,
 });
 
-function CalendarList({ calendars, accountId }: { calendars: CalendarSource[]; accountId: string }) {
+function CalendarList({
+  calendars,
+  accountId,
+  onHideRequest,
+  pendingCalendarId,
+}: {
+  calendars: CalendarSource[];
+  accountId: string;
+  onHideRequest: (calendar: CalendarSource) => void;
+  pendingCalendarId: string | null;
+}) {
   if (calendars.length === 0) {
     return <NavigationMenuEmptyItem>No calendars</NavigationMenuEmptyItem>;
   }
-  return calendars.map((calendar) => (
-    <NavigationMenuLinkItem
-      key={calendar.id}
-      to={`/dashboard/accounts/${accountId}/${calendar.id}`}
-      onMouseEnter={() => preload(`/api/sources/${calendar.id}`, fetcher)}
-    >
-      <NavigationMenuItemIcon>
-        <Calendar size={15} />
-      </NavigationMenuItemIcon>
-      <NavigationMenuItemLabel>
-        {calendar.name}
-        {calendar.providerMissingSince && (
-          <Text as="span" size="sm" tone="danger"> (not found at provider)</Text>
-        )}
-      </NavigationMenuItemLabel>
-      <NavigationMenuItemTrailing>
-        {calendar.unavailableSince && <Text size="sm" tone="muted">Unavailable</Text>}
-      </NavigationMenuItemTrailing>
-    </NavigationMenuLinkItem>
-  ));
+  return calendars.map((calendar) => {
+    const isPending = pendingCalendarId === calendar.id;
+    return (
+      <NavigationMenuLinkItem
+        key={calendar.id}
+        to={`/dashboard/accounts/${accountId}/${calendar.id}`}
+        onMouseEnter={() => preload(`/api/sources/${calendar.id}`, fetcher)}
+      >
+        <NavigationMenuItemIcon>
+          <Calendar size={15} />
+        </NavigationMenuItemIcon>
+        <NavigationMenuItemLabel>
+          {calendar.name}
+          {calendar.providerMissingSince && (
+            <Text as="span" size="sm" tone="danger"> (not found at provider)</Text>
+          )}
+        </NavigationMenuItemLabel>
+        <NavigationMenuItemTrailing
+          indicator={
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onHideRequest(calendar);
+              }}
+              className="text-xs text-foreground-muted hover:text-foreground shrink-0 disabled:opacity-40"
+            >
+              {isPending ? "Hiding…" : "Hide"}
+            </button>
+          }
+        >
+          {calendar.unavailableSince && <Text size="sm" tone="muted">Unavailable</Text>}
+        </NavigationMenuItemTrailing>
+      </NavigationMenuLinkItem>
+    );
+  });
+}
+
+function HiddenCalendarsSection({
+  calendars,
+  onShow,
+  pendingCalendarId,
+}: {
+  calendars: CalendarSource[];
+  onShow: (calendarId: string) => void;
+  pendingCalendarId: string | null;
+}) {
+  if (calendars.length === 0) return null;
+
+  return (
+    <Collapsible trigger={<Text size="sm" tone="muted">Hidden calendars ({calendars.length})</Text>}>
+      <NavigationMenu>
+        {calendars.map((calendar) => {
+          const isPending = pendingCalendarId === calendar.id;
+          return (
+            <NavigationMenuButtonItem
+              key={calendar.id}
+              onClick={() => onShow(calendar.id)}
+              disabled={isPending}
+            >
+              <NavigationMenuItemIcon>
+                <Calendar size={15} />
+              </NavigationMenuItemIcon>
+              <NavigationMenuItemLabel>{calendar.name}</NavigationMenuItemLabel>
+              <NavigationMenuItemTrailing>
+                <Text size="sm" tone="muted">{isPending ? "Showing…" : "Show"}</Text>
+              </NavigationMenuItemTrailing>
+            </NavigationMenuButtonItem>
+          );
+        })}
+      </NavigationMenu>
+    </Collapsible>
+  );
 }
 
 function RefreshCalendarsItem({ accountId }: { accountId: string }) {
@@ -121,6 +187,11 @@ function AccountDetailPage() {
   const [isDeleting, startDeleteTransition] = useTransition();
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const [pendingCalendarId, setPendingCalendarId] = useState<string | null>(null);
+  const [hideConfirmCalendar, setHideConfirmCalendar] = useState<CalendarSource | null>(null);
+  const [visibilityError, setVisibilityError] = useState<string | null>(null);
+  const [isUpdatingVisibility, startVisibilityTransition] = useTransition();
+
   const isLoading = accountLoading || calendarsLoading;
   const error = accountError || calendarsError;
 
@@ -141,14 +212,44 @@ function AccountDetailPage() {
     });
   };
 
+  const applyHidden = (calendarId: string, hidden: boolean) => {
+    setVisibilityError(null);
+    setPendingCalendarId(calendarId);
+    startVisibilityTransition(async () => {
+      try {
+        await setCalendarHidden(globalMutate, calendarId, hidden);
+      } catch (err) {
+        setVisibilityError(resolveErrorMessage(err, hidden ? "Failed to hide calendar." : "Failed to show calendar."));
+      } finally {
+        setPendingCalendarId(null);
+      }
+    });
+  };
+
+  const handleHideRequest = async (calendar: CalendarSource) => {
+    setVisibilityError(null);
+    try {
+      const detail = await fetcher<CalendarDetail>(`/api/sources/${calendar.id}`);
+      if (detail.destinationIds.length > 0 || detail.sourceIds.length > 0) {
+        setHideConfirmCalendar(calendar);
+        return;
+      }
+    } catch {
+      // Couldn't check mappings; hide directly and let the PATCH surface any real failure.
+    }
+    applyHidden(calendar.id, true);
+  };
+
   if (error || isLoading || !account) {
     if (error) return <RouteShell status="error" onRetry={async () => { await invalidateAccountsAndSources(globalMutate, `/api/accounts/${accountId}`); }} />;
     return <RouteShell status="loading" />;
   }
 
-  const calendars = (allCalendars ?? []).filter(
+  const accountCalendars = (allCalendars ?? []).filter(
     (calendar) => calendar.accountId === accountId,
   );
+  const calendars = accountCalendars.filter((calendar) => !calendar.hidden);
+  const hiddenCalendars = accountCalendars.filter((calendar) => calendar.hidden);
 
   return (
     <div className="flex flex-col gap-1.5 lg:h-full">
@@ -181,7 +282,7 @@ function AccountDetailPage() {
               to={needsReauth ? `/dashboard/accounts/${accountId}/reconnect` : undefined}
             />
             <MetadataRow label="Resource Type" value="Account" />
-            <MetadataRow label="Calendar Count" value={String(calendars.length)} />
+            <MetadataRow label="Calendar Count" value={String(accountCalendars.length)} />
             <MetadataRow label="Identifier" value={account.accountIdentifier ?? ""} truncate />
             <MetadataRow label="Provider" value={account.providerName} />
             <MetadataRow label="Authenticated" value={account.authType} />
@@ -193,11 +294,22 @@ function AccountDetailPage() {
         </MenuGate>
         <DashboardSection
           title="Account Calendars"
-          description={<>This account has {pluralize(calendars.length, "calendar")} attached to it, choose a calendar below to view more details and configure it. Calendars no longer found at the provider are noted below.</>}
+          description={<>This account has {pluralize(accountCalendars.length, "calendar")} attached to it, choose a calendar below to view more details and configure it. Calendars no longer found at the provider are noted below.</>}
         />
         <NavigationMenu>
-          <CalendarList calendars={calendars} accountId={accountId} />
+          <CalendarList
+            calendars={calendars}
+            accountId={accountId}
+            onHideRequest={handleHideRequest}
+            pendingCalendarId={pendingCalendarId}
+          />
         </NavigationMenu>
+        {visibilityError && <Text size="sm" tone="danger" className="px-0.5">{visibilityError}</Text>}
+        <HiddenCalendarsSection
+          calendars={hiddenCalendars}
+          onShow={(calendarId) => applyHidden(calendarId, false)}
+          pendingCalendarId={pendingCalendarId}
+        />
         <NavigationMenu>
           <RefreshCalendarsItem accountId={accountId} />
         </NavigationMenu>
@@ -217,6 +329,21 @@ function AccountDetailPage() {
           onOpenChange={setDeleteOpen}
           deleting={isDeleting}
           onConfirm={handleConfirmDelete}
+        />
+        <DeleteConfirmation
+          title="Hide this calendar?"
+          description="Hiding removes its mappings. It won't sync until you show it again."
+          open={hideConfirmCalendar !== null}
+          onOpenChange={(open) => !open && setHideConfirmCalendar(null)}
+          deleting={isUpdatingVisibility && pendingCalendarId === hideConfirmCalendar?.id}
+          onConfirm={() => {
+            if (!hideConfirmCalendar) return;
+            const calendarId = hideConfirmCalendar.id;
+            setHideConfirmCalendar(null);
+            applyHidden(calendarId, true);
+          }}
+          confirmLabel="Hide"
+          pendingLabel="Hiding..."
         />
       </PageBody>
     </div>

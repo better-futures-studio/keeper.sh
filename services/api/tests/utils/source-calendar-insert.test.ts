@@ -85,6 +85,7 @@ describe("insertSourceCalendars", () => {
       includeInIcalFeed: true,
       excludeEventName: true,
       customEventName: "{{calendar_name}}",
+      markEventsAsPrivate: true,
     });
   });
 

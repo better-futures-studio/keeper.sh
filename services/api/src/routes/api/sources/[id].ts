@@ -15,6 +15,7 @@ import { withProviderMetadata } from "@/utils/provider-display";
 import { syncDefaultFeedMembership } from "@/utils/ical-feeds";
 import type { FeedMembershipClient } from "@/utils/ical-feeds";
 import { deleteSourceCalendar } from "@/utils/source-calendars";
+import { removeMappingsForCalendars } from "@/utils/calendar-hidden";
 import { handlePatchSourceRoute } from "./[id]/source-item-routes";
 
 const GET = withWideEvent(
@@ -46,6 +47,7 @@ const GET = withWideEvent(
         treatFullDayTimedEventsAsAllDay: calendarsTable.treatFullDayTimedEventsAsAllDay,
         unavailableSince: calendarsTable.unavailableSince,
         disabled: calendarsTable.disabled,
+        hidden: calendarsTable.hidden,
         ingestFailureCount: calendarsTable.ingestFailureCount,
         ingestLastFailureAt: calendarsTable.ingestLastFailureAt,
         markEventsAsPrivate: calendarsTable.markEventsAsPrivate,
@@ -132,6 +134,9 @@ const PATCH = withWideEvent(
                 if (updated?.capabilities.includes("push")) {
                   await requestUserSync(transaction, userIdToUpdate);
                 }
+                if (updated && updates.hidden === true) {
+                  await removeMappingsForCalendars(transaction, [sourceCalendarId]);
+                }
                 await applyFeedMembership(transaction, updated ?? null);
                 return updated ?? null;
               }),
@@ -155,6 +160,9 @@ const PATCH = withWideEvent(
               .returning();
             if (updated && "markEventsAsPrivate" in updates) {
               await requestUserSync(transaction, userIdToUpdate);
+            }
+            if (updated && updates.hidden === true) {
+              await removeMappingsForCalendars(transaction, [sourceCalendarId]);
             }
             await applyFeedMembership(transaction, updated ?? null);
             return updated ?? null;

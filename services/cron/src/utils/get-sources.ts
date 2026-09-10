@@ -1,4 +1,5 @@
 import {
+  calendarIsSyncable,
   calendarsTable,
   sourceDestinationMappingsTable,
 } from "@keeper.sh/database/schema";
@@ -20,7 +21,7 @@ const fetchCalendars = (calendarType?: string) => {
       .where(
         and(
           eq(calendarsTable.calendarType, calendarType),
-          eq(calendarsTable.disabled, false),
+          calendarIsSyncable,
           inArray(calendarsTable.id,
             database.selectDistinct({ id: sourceDestinationMappingsTable.sourceCalendarId })
               .from(sourceDestinationMappingsTable),
@@ -33,7 +34,7 @@ const fetchCalendars = (calendarType?: string) => {
     .from(calendarsTable)
     .where(
       and(
-        eq(calendarsTable.disabled, false),
+        calendarIsSyncable,
         inArray(calendarsTable.id,
           database.selectDistinct({ id: sourceDestinationMappingsTable.sourceCalendarId })
             .from(sourceDestinationMappingsTable),
@@ -44,7 +45,7 @@ const fetchCalendars = (calendarType?: string) => {
 
 const getDestinationScopeFilter = () => and(
   arrayContains(calendarsTable.capabilities, ["push"]),
-  eq(calendarsTable.disabled, false),
+  calendarIsSyncable,
 );
 
 const getSourcesByPlan = async (

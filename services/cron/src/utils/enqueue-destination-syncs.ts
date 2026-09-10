@@ -1,6 +1,7 @@
 import { createPushSyncQueue } from "@keeper.sh/queue";
 import type { PushSyncTrigger } from "@keeper.sh/queue";
 import {
+  calendarIsSyncable,
   calendarsTable,
   userSyncRequestsTable,
 } from "@keeper.sh/database/schema";
@@ -69,7 +70,7 @@ const enqueueDestinationSyncsForUsers = async (
       .from(calendarsTable)
       .where(and(
         arrayContains(calendarsTable.capabilities, ["push"]),
-        eq(calendarsTable.disabled, false),
+        calendarIsSyncable,
         inArray(calendarsTable.userId, userIds),
       )),
     getPendingRequests: () => database

@@ -475,6 +475,7 @@ const DEFAULT_SOURCE_SYNC_RULES = {
   excludeEventLocation: true,
   excludeEventName: true,
   includeInIcalFeed: true,
+  markEventsAsPrivate: true,
 } as const;
 
 const applySourceSyncDefaults = <TValues extends object>(

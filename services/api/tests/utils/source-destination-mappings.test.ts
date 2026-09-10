@@ -227,6 +227,22 @@ describe("runSetDestinationsForSource", () => {
     ).rejects.toThrow("Some destination calendars not found");
   });
 
+  it("throws when the source or a destination is hidden", () => {
+    expect(
+      runSetDestinationsForSource("user-1", "source-1", ["dest-1"], {
+        withTransaction: (transactionCallback) =>
+          transactionCallback({
+            acquireUserLock: () => Promise.resolve(),
+            findHiddenIds: () => Promise.resolve(["source-1"]),
+            findOwnedDestinationIds: () => Promise.resolve(["dest-1"]),
+            replaceSourceMappings: () => Promise.resolve(),
+            ensureDestinationSyncStatuses: () => Promise.resolve(),
+            sourceExists: () => Promise.resolve(true),
+          }),
+      }),
+    ).rejects.toThrow("Calendar is hidden");
+  });
+
   it("replaces mappings, ensures statuses, and triggers sync on success", async () => {
     const operationLog: string[] = [];
 

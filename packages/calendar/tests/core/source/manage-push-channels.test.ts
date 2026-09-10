@@ -22,6 +22,7 @@ const makeCalendar = (
   calendarId: "cal-1",
   capabilities: ["pull"],
   disabled: false,
+  hidden: false,
   externalCalendarId: "external-1",
   needsReauthentication: false,
   provider: "google",

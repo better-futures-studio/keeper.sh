@@ -13,6 +13,7 @@ The recommended way to run it is the hosted version at [keeper.sh](https://www.k
 - Incremental syncing on Google and Outlook using provider sync tokens rather than refetching everything
 - Event content agnostic syncing engine
 - Push aggregate events to one or more calendars
+- Choose which calendars to sync when you connect an account; newly connected calendars sync as private by default
 - Per-source privacy controls to strip event names, descriptions, and locations, replacing the title with a `{{calendar_name}}` or `{{event_name}}` template
 - REST API under `/api/v1` authenticated with API tokens
 - MCP (Model Context Protocol) server for AI agent calendar access
@@ -570,7 +571,7 @@ curl https://keeper.example.com/api/v1/calendars \
 
 | Method   | Path                                     | Description                                                                                                                                                    |
 | -------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`    | `/api/v1/calendars`                      | List connected calendars. Accepts an optional comma-delimited `provider` filter.                                                                                |
+| `GET`    | `/api/v1/calendars`                      | List connected calendars. Accepts an optional comma-delimited `provider` filter. Hidden calendars are omitted unless `includeHidden=true`. Each item includes `hidden`. |
 | `PATCH`  | `/api/v1/calendars/{calendarId}`         | Pause or resume syncing for a calendar. Send `paused` as `true` to halt it in both directions without disconnecting it.                                         |
 | `GET`    | `/api/v1/calendars/{calendarId}/invites` | List invitations on a calendar that have not been responded to, within a date range.                                                                            |
 | `GET`    | `/api/v1/accounts`                       | List connected calendar accounts and how many calendars each has. Accepts an optional comma-delimited `provider` filter.                                        |

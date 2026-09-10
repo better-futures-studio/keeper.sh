@@ -9,7 +9,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   DEFAULT_FEED_NAME,
   DEFAULT_FEED_SETTINGS,
@@ -122,7 +122,8 @@ const calendarsTable = pgTable(
     includeInIcalFeed: boolean().notNull().default(false),
     treatFullDayTimedEventsAsAllDay: boolean().notNull().default(false),
     customEventName: text().notNull().default("{{calendar_name}}"),
-    markEventsAsPrivate: boolean().notNull().default(false),
+    markEventsAsPrivate: boolean().notNull().default(true),
+    hidden: boolean().notNull().default(false),
     disabled: boolean().notNull().default(false),
     failureCount: integer().notNull().default(0),
     lastFailureAt: timestamp({ withTimezone: true }),
@@ -175,6 +176,11 @@ const calendarsTable = pgTable(
       sql`"ingestHistoricRange" IN (${sql.raw(SYNC_RANGE_SQL_VALUES)}) AND "ingestFutureRange" IN (${sql.raw(SYNC_RANGE_SQL_VALUES)}) AND (("ingestWindowStart" IS NULL AND "ingestWindowEnd" IS NULL AND "ingestWindowRecordedAt" IS NULL) OR ("ingestWindowStart" IS NOT NULL AND "ingestWindowEnd" IS NOT NULL AND "ingestWindowRecordedAt" IS NOT NULL AND "ingestWindowStart" < "ingestWindowEnd"))`,
     ),
   ],
+);
+
+const calendarIsSyncable = and(
+  eq(calendarsTable.disabled, false),
+  eq(calendarsTable.hidden, false),
 );
 
 const calendarRemovalsTable = pgTable(
@@ -542,6 +548,7 @@ export {
   apiTokensTable,
   caldavCredentialsTable,
   calendarAccountsTable,
+  calendarIsSyncable,
   calendarPushChannelsTable,
   calendarRemovalsTable,
   calendarSnapshotsTable,

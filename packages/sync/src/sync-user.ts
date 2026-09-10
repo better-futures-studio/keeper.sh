@@ -32,6 +32,7 @@ import type {
 } from "@keeper.sh/calendar";
 import {
   calendarAccountsTable,
+  calendarIsSyncable,
   calendarsTable,
   sourceDestinationMappingsTable,
 } from "@keeper.sh/database/schema";
@@ -657,7 +658,7 @@ const getDestinationAttempt = async (
     .where(and(
       eq(calendarsTable.userId, userId),
       eq(calendarsTable.id, calendarId),
-      eq(calendarsTable.disabled, false),
+      calendarIsSyncable,
       arrayContains(calendarsTable.capabilities, ["push"]),
     ))
     .limit(1);
@@ -800,7 +801,7 @@ const syncDestinationsForUser = async (
       and(
         eq(calendarsTable.userId, userId),
         eq(calendarsTable.id, config.destinationCalendarId),
-        eq(calendarsTable.disabled, false),
+        calendarIsSyncable,
         arrayContains(calendarsTable.capabilities, ["push"]),
       ),
     );

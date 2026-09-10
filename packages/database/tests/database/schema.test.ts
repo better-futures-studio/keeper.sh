@@ -45,6 +45,15 @@ describe("calendar schema", () => {
     expect(defaults.excludeEventDescription).toBe(true);
     expect(defaults.excludeEventLocation).toBe(true);
     expect(defaults.customEventName).toBe("{{calendar_name}}");
+    expect(defaults.markEventsAsPrivate).toBe(true);
+  });
+
+  it("hides nothing until the user deselects a calendar", () => {
+    const tableConfig = getTableConfig(calendarsTable);
+    const hidden = tableConfig.columns.find((column) => column.name === "hidden");
+
+    expect(hidden?.notNull).toBe(true);
+    expect(hidden?.default).toBe(false);
   });
 });
 

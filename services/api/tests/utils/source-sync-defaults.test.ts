@@ -12,6 +12,7 @@ describe("DEFAULT_SOURCE_SYNC_RULES", () => {
       excludeEventLocation: true,
       excludeEventName: true,
       includeInIcalFeed: true,
+      markEventsAsPrivate: true,
     });
   });
 
@@ -29,6 +30,7 @@ describe("DEFAULT_SOURCE_SYNC_RULES", () => {
       excludeEventLocation: true,
       excludeEventName: true,
       includeInIcalFeed: true,
+      markEventsAsPrivate: true,
       name: "Team Calendar",
       userId: "user-1",
     });

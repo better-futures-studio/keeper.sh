@@ -10,6 +10,7 @@ import type { SyncLockHandle } from "@keeper.sh/sync";
 import type { database as databaseInstance } from "@/context";
 import { enqueuePushSync } from "./enqueue-push-sync";
 import { spawnBackgroundJob } from "./background-task";
+import { CALENDAR_HIDDEN_MESSAGE } from "./calendar-hidden";
 import { assertAllIdsOwned } from "./owned-ids";
 const EMPTY_LIST_COUNT = 0;
 const USER_MAPPING_LOCK_NAMESPACE = 9001;
@@ -36,6 +37,7 @@ interface SetDestinationsTransaction {
     userId: string,
     destinationCalendarIds: string[],
   ) => Promise<string[]>;
+  findHiddenIds?: (userId: string, calendarIds: string[]) => Promise<string[]>;
   replaceSourceMappings: (
     sourceCalendarId: string,
     destinationCalendarIds: string[],
@@ -59,6 +61,7 @@ interface SetSourcesTransaction {
   countUserMappings?: (userId: string) => Promise<number>;
   countMappingsForDestination?: (destinationCalendarId: string) => Promise<number>;
   findOwnedSourceIds: (userId: string, sourceCalendarIds: string[]) => Promise<string[]>;
+  findHiddenIds?: (userId: string, calendarIds: string[]) => Promise<string[]>;
   replaceDestinationMappings: (
     destinationCalendarId: string,
     sourceCalendarIds: string[],
@@ -147,6 +150,24 @@ const createSetDestinationsTransaction = (
       );
 
     return ownedDestinations.map(({ id }) => id);
+  },
+  findHiddenIds: async (userId, calendarIds) => {
+    if (calendarIds.length === EMPTY_LIST_COUNT) {
+      return [];
+    }
+
+    const hiddenCalendars = await transactionClient
+      .select({ id: calendarsTable.id })
+      .from(calendarsTable)
+      .where(
+        and(
+          eq(calendarsTable.userId, userId),
+          eq(calendarsTable.hidden, true),
+          inArray(calendarsTable.id, calendarIds),
+        ),
+      );
+
+    return hiddenCalendars.map(({ id }) => id);
   },
   replaceSourceMappings: async (sourceCalendarId, destinationCalendarIds) => {
     await transactionClient
@@ -239,6 +260,24 @@ const createSetSourcesTransaction = (
 
     return ownedSources.map(({ id }) => id);
   },
+  findHiddenIds: async (userId, calendarIds) => {
+    if (calendarIds.length === EMPTY_LIST_COUNT) {
+      return [];
+    }
+
+    const hiddenCalendars = await transactionClient
+      .select({ id: calendarsTable.id })
+      .from(calendarsTable)
+      .where(
+        and(
+          eq(calendarsTable.userId, userId),
+          eq(calendarsTable.hidden, true),
+          inArray(calendarsTable.id, calendarIds),
+        ),
+      );
+
+    return hiddenCalendars.map(({ id }) => id);
+  },
   replaceDestinationMappings: async (destinationCalendarId, sourceCalendarIds) => {
     await transactionClient
       .delete(sourceDestinationMappingsTable)
@@ -325,6 +364,14 @@ const runSetDestinationsForSource = async (
       throw new Error("Source calendar not found");
     }
 
+    const hiddenIds = await transaction.findHiddenIds?.(userId, [
+      sourceCalendarId,
+      ...uniqueDestinationCalendarIds,
+    ]) ?? [];
+    if (hiddenIds.length > EMPTY_LIST_COUNT) {
+      throw new Error(CALENDAR_HIDDEN_MESSAGE);
+    }
+
     if (uniqueDestinationCalendarIds.length > EMPTY_LIST_COUNT) {
       const validDestinationIds = await transaction.findOwnedDestinationIds(
         userId,
@@ -383,6 +430,14 @@ const runSetSourcesForDestination = async (
     );
     if (!destinationExists) {
       throw new Error("Destination calendar not found");
+    }
+
+    const hiddenIds = await transaction.findHiddenIds?.(userId, [
+      destinationCalendarId,
+      ...uniqueSourceCalendarIds,
+    ]) ?? [];
+    if (hiddenIds.length > EMPTY_LIST_COUNT) {
+      throw new Error(CALENDAR_HIDDEN_MESSAGE);
     }
 
     if (uniqueSourceCalendarIds.length > EMPTY_LIST_COUNT) {

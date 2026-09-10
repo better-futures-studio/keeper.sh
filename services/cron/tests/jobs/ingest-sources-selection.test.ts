@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { and, arrayContains, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, arrayContains, asc, desc, inArray, sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { calendarsTable, userSubscriptionsTable } from "@keeper.sh/database/schema";
+import { calendarIsSyncable, calendarsTable, userSubscriptionsTable } from "@keeper.sh/database/schema";
 import type ingestSourcesJob from "../../src/jobs/ingest-sources";
 import type { ingestOAuthSources as ingestOAuthSourcesFn } from "../../src/jobs/ingest-sources";
 
@@ -100,7 +100,7 @@ describe("ingestOAuthSources selection", () => {
     expect(capturedPredicates).toHaveLength(1);
     expect(capturedPredicates[0]).toEqual(and(
       arrayContains(calendarsTable.capabilities, ["pull"]),
-      eq(calendarsTable.disabled, false),
+      calendarIsSyncable,
     ));
   });
 
@@ -110,7 +110,7 @@ describe("ingestOAuthSources selection", () => {
     expect(capturedPredicates).toHaveLength(1);
     expect(capturedPredicates[0]).toEqual(and(
       arrayContains(calendarsTable.capabilities, ["pull"]),
-      eq(calendarsTable.disabled, false),
+      calendarIsSyncable,
       inArray(calendarsTable.id, ["cal-1", "cal-2"]),
     ));
   });

@@ -1,4 +1,4 @@
-import { calendarsTable, sourceDestinationMappingsTable } from "@keeper.sh/database/schema";
+import { calendarIsSyncable, calendarsTable, sourceDestinationMappingsTable } from "@keeper.sh/database/schema";
 import { createRequiredSourceRanges, createSourceIngestionPlan } from "@keeper.sh/calendar";
 import type { SourceIngestionPlan, StoredDestinationRanges } from "@keeper.sh/calendar";
 import { and, arrayContains, eq } from "drizzle-orm";
@@ -20,7 +20,7 @@ const createDestinationRangesReader = (
   )
   .where(and(
     eq(sourceDestinationMappingsTable.sourceCalendarId, sourceCalendarId),
-    eq(calendarsTable.disabled, false),
+    calendarIsSyncable,
     arrayContains(calendarsTable.capabilities, ["push"]),
   ));
 

@@ -27,6 +27,7 @@ const makeSource = (overrides: Partial<CalendarSource> = {}): CalendarSource => 
   unavailableSince: null,
   disabled: false,
   providerMissingSince: null,
+  hidden: false,
   ...overrides,
 });
 

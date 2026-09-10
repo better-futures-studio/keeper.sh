@@ -2,6 +2,7 @@ import { and, arrayContains, eq, inArray } from "drizzle-orm";
 import type { BunSQLDatabase } from "drizzle-orm/bun-sql";
 import {
   calendarAccountsTable,
+  calendarIsSyncable,
   calendarPushChannelsTable,
   calendarsTable,
 } from "@keeper.sh/database/schema";
@@ -62,7 +63,7 @@ const createManagePushChannelsDependencies = (
   const eligibleCalendarScope = () => {
     const shared = and(
       arrayContains(calendarsTable.capabilities, ["pull"]),
-      eq(calendarsTable.disabled, false),
+      calendarIsSyncable,
       inArray(calendarAccountsTable.provider, PUSH_PROVIDERS),
     );
     if (!config.onlyAccountId) {
@@ -118,6 +119,7 @@ const createManagePushChannelsDependencies = (
         calendarId: calendarsTable.id,
         capabilities: calendarsTable.capabilities,
         disabled: calendarsTable.disabled,
+        hidden: calendarsTable.hidden,
         externalCalendarId: calendarsTable.externalCalendarId,
         needsReauthentication: calendarAccountsTable.needsReauthentication,
         provider: calendarAccountsTable.provider,

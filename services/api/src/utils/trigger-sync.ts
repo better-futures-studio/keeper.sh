@@ -1,5 +1,5 @@
 import type { Plan } from "@keeper.sh/data-schemas";
-import { calendarsTable } from "@keeper.sh/database/schema";
+import { calendarIsSyncable, calendarsTable } from "@keeper.sh/database/schema";
 import { and, arrayContains, eq, isNotNull } from "drizzle-orm";
 import type { KeeperSyncTriggerResult } from "@/types";
 import { enqueuePushSync } from "./enqueue-push-sync";
@@ -30,7 +30,7 @@ const triggerSync = async (userId: string, plan: Plan): Promise<KeeperSyncTrigge
         .set({ ingestNextAttemptAt: null })
         .where(and(
           eq(calendarsTable.userId, backoffUserId),
-          eq(calendarsTable.disabled, false),
+          calendarIsSyncable,
           arrayContains(calendarsTable.capabilities, ["pull"]),
           isNotNull(calendarsTable.ingestNextAttemptAt),
         ))

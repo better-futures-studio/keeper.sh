@@ -239,7 +239,7 @@ function AttentionDot() {
 function CalendarsMenu() {
   const reauthIds = new Set(useReauthAccounts().map((account) => account.id));
   const { data: calendarsData, shouldAnimate: animateCalendars, isLoading: calendarsLoading, error, mutate: mutateCalendars } = useAnimatedSWR<CalendarSource[]>("/api/sources");
-  const calendars = calendarsData ?? [];
+  const calendars = (calendarsData ?? []).filter((calendar) => !calendar.hidden);
 
   const { data: eventCountData, error: eventCountError } = useSWR<{ count: number }>("/api/events/count");
   const eventCount = eventCountError ? undefined : eventCountData?.count;

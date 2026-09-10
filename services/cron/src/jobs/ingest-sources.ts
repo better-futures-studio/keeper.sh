@@ -52,6 +52,7 @@ import {
 import { decryptPassword, resolveDatabaseErrorClassification } from "@keeper.sh/database";
 import {
   calendarAccountsTable,
+  calendarIsSyncable,
   calendarsTable,
   caldavCredentialsTable,
   eventStatesTable,
@@ -723,7 +724,7 @@ const getRequiredSourceRanges = async (
     )
     .where(and(
       eq(sourceDestinationMappingsTable.sourceCalendarId, sourceCalendarId),
-      eq(calendarsTable.disabled, false),
+      calendarIsSyncable,
       arrayContains(calendarsTable.capabilities, ["push"]),
     )));
   return createRequiredSourceRanges(mappings);
@@ -1266,7 +1267,7 @@ const buildOAuthSourceQuery = (calendarIds: string[] | undefined) =>
     .where(
       and(
         arrayContains(calendarsTable.capabilities, ["pull"]),
-        eq(calendarsTable.disabled, false),
+        calendarIsSyncable,
         ...buildOAuthSourceIdFilter(calendarIds),
       ),
     )
@@ -1355,7 +1356,7 @@ const ingestOAuthSources = async (
                   )
                   .where(and(
                     eq(calendarsTable.id, source.calendarId),
-                    eq(calendarsTable.disabled, false),
+                    calendarIsSyncable,
                     arrayContains(calendarsTable.capabilities, ["pull"]),
                   ))
                   .limit(1));
@@ -1550,7 +1551,7 @@ const ingestCalDAVSources = async (lane: IngestLane): Promise<IngestionBatchResu
     .where(
       and(
         arrayContains(calendarsTable.capabilities, ["pull"]),
-        eq(calendarsTable.disabled, false),
+        calendarIsSyncable,
       ),
     )
     .orderBy(...buildFleetPriorityOrder());
@@ -1601,7 +1602,7 @@ const ingestCalDAVSources = async (lane: IngestLane): Promise<IngestionBatchResu
                   )
                   .where(and(
                     eq(calendarsTable.id, source.calendarId),
-                    eq(calendarsTable.disabled, false),
+                    calendarIsSyncable,
                     arrayContains(calendarsTable.capabilities, ["pull"]),
                   ))
                   .limit(1));
@@ -1751,7 +1752,7 @@ const ingestIcsSources = async (lane: IngestLane): Promise<IngestionBatchResult>
     .where(
       and(
         eq(calendarsTable.calendarType, "ical"),
-        eq(calendarsTable.disabled, false),
+        calendarIsSyncable,
       ),
     )
     .orderBy(...buildFleetPriorityOrder());
@@ -1791,7 +1792,7 @@ const ingestIcsSources = async (lane: IngestLane): Promise<IngestionBatchResult>
                   .where(and(
                     eq(calendarsTable.id, source.calendarId),
                     eq(calendarsTable.calendarType, "ical"),
-                    eq(calendarsTable.disabled, false),
+                    calendarIsSyncable,
                   ))
                   .limit(1));
                 return currentSource;

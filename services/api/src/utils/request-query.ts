@@ -66,6 +66,12 @@ const idParamSchema = type({
 });
 type IdParam = typeof idParamSchema.infer;
 
+const accountIdParamSchema = type({
+  accountId: "string",
+  "+": "reject",
+});
+type AccountIdParam = typeof accountIdParamSchema.infer;
+
 export {
   sourceAuthorizeQuerySchema,
   destinationAuthorizeQuerySchema,
@@ -76,6 +82,7 @@ export {
   caldavSourcesQuerySchema,
   providerParamSchema,
   idParamSchema,
+  accountIdParamSchema,
 };
 export type {
   SourceAuthorizeQuery,
@@ -87,4 +94,5 @@ export type {
   CaldavSourcesQuery,
   ProviderParam,
   IdParam,
+  AccountIdParam,
 };

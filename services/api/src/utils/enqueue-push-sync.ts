@@ -1,7 +1,7 @@
 import { createPushSyncQueue } from "@keeper.sh/queue";
 import type { PushSyncJobPayload } from "@keeper.sh/queue";
 import type { Plan } from "@keeper.sh/data-schemas";
-import { calendarsTable, userSyncRequestsTable } from "@keeper.sh/database/schema";
+import { calendarIsSyncable, calendarsTable, userSyncRequestsTable } from "@keeper.sh/database/schema";
 import { and, arrayContains, eq } from "drizzle-orm";
 
 interface PushSyncJobOptions {
@@ -75,7 +75,7 @@ const enqueuePushSync = async (userId: string, plan: Plan): Promise<void> => {
         .from(calendarsTable)
         .where(and(
           eq(calendarsTable.userId, destinationUserId),
-          eq(calendarsTable.disabled, false),
+          calendarIsSyncable,
           arrayContains(calendarsTable.capabilities, ["push"]),
         ));
       return destinations.map(({ calendarId }) => calendarId);
