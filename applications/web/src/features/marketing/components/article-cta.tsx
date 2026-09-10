@@ -1,8 +1,14 @@
 import { ButtonText, LinkButton } from "@/components/ui/primitives/button";
 import { Heading3 } from "@/components/ui/primitives/heading";
 import { Text } from "@/components/ui/primitives/text";
+import { useSignupEntry } from "../signup-entry";
 
 export function ArticleCta() {
+  const { offerRegister } = useSignupEntry();
+  const signupCta = offerRegister
+    ? { label: "Register for Keeper.sh", to: "/register" as const }
+    : { label: "Sign in to Keeper.sh", to: "/login" as const };
+
   return (
     <aside className="overflow-hidden rounded-2xl border border-border-elevated bg-background-elevated">
       <div className="grid grid-cols-1 sm:grid-cols-3 sm:items-stretch">
@@ -13,8 +19,8 @@ export function ArticleCta() {
           <Text size="base" tone="muted" className="leading-6">
             Connect your calendars and stop them from double-booking each other. Free for two accounts.
           </Text>
-          <LinkButton size="compact" to="/register" variant="highlight">
-            <ButtonText>Register for Keeper.sh</ButtonText>
+          <LinkButton size="compact" to={signupCta.to} variant="highlight">
+            <ButtonText>{signupCta.label}</ButtonText>
           </LinkButton>
         </div>
         <div

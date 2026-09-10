@@ -26,6 +26,7 @@ import { MarketingIllustrationSync } from "@/illustrations/marketing-illustratio
 import { canonicalUrl, jsonLdScript, seoMeta, webPageSchema, breadcrumbSchema, breadcrumbTrail, faqSchema } from "@/lib/seo";
 import { Breadcrumb } from "@/components/ui/primitives/breadcrumb";
 import { ANALYTICS_EVENTS } from "@/lib/analytics";
+import { useSignupEntry } from "@/features/marketing/signup-entry";
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
 import ArrowUpRightIcon from "lucide-react/dist/esm/icons/arrow-up-right";
 
@@ -121,6 +122,7 @@ export const Route = createFileRoute("/(marketing)/self-hosting")({
 });
 
 function SelfHostingPage() {
+  const { signupPath } = useSignupEntry();
   return (
     <div className="flex flex-col gap-6 py-16">
       <Breadcrumb items={breadcrumbs} />
@@ -218,7 +220,7 @@ function SelfHostingPage() {
               </ButtonIcon>
             </ExternalLinkButton>
             <LinkButton
-              to="/register"
+              to={signupPath}
               size="compact"
               variant="inverse-ghost"
               data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked}

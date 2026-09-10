@@ -5,6 +5,7 @@ import { ButtonIcon, ButtonText, LinkButton } from "@/components/ui/primitives/b
 import { MarketingCtaCard, MarketingCtaSection } from "@/features/marketing/components/marketing-cta";
 import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
+import { useSignupEntry } from "../signup-entry";
 
 export function MarketingToolSection({ children }: PropsWithChildren) {
   return <section className="w-full pt-8">{children}</section>;
@@ -49,6 +50,8 @@ type MarketingToolCtaProps = {
 };
 
 export function MarketingToolCta({ title, body, source }: MarketingToolCtaProps) {
+  const { signupPath } = useSignupEntry();
+
   return (
     <MarketingCtaSection>
       <MarketingCtaCard>
@@ -58,7 +61,7 @@ export function MarketingToolCta({ title, body, source }: MarketingToolCtaProps)
         </Text>
         <div className="flex items-center gap-2 mt-2">
           <LinkButton
-            to="/register"
+            to={signupPath}
             size="compact"
             variant="inverse"
             data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked}

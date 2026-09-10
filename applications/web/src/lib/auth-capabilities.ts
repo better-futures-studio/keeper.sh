@@ -73,6 +73,19 @@ const formatAllowedSignupDomainsHint = (
   return `Sign-ups are limited to ${domains.map((domain) => `@${domain}`).join(", ")} accounts`;
 };
 
+const offersSeparateSignup = (capabilities: AuthCapabilities): boolean =>
+  capabilities.credentialMode !== "none";
+
+const resolveSignupPath = (
+  capabilities: AuthCapabilities,
+): "/login" | "/register" => {
+  if (offersSeparateSignup(capabilities)) {
+    return "/register";
+  }
+
+  return "/login";
+};
+
 const fetchAuthCapabilitiesWithApi = async (
   fetchApi: AppJsonFetcher,
 ): Promise<AuthCapabilities> => {
@@ -84,7 +97,9 @@ export {
   fetchAuthCapabilitiesWithApi,
   formatAllowedSignupDomainsHint,
   getEnabledSocialProviders,
+  offersSeparateSignup,
   resolveCredentialField,
+  resolveSignupPath,
   supportsPasskeys,
 };
 export type { AuthCapabilities, CredentialField, SocialProviderId };

@@ -54,6 +54,7 @@ import { GithubStarButton } from '../../components/ui/primitives/github-star-but
 import { latestArticles } from '../../lib/article-library'
 import { calendarEmphasizedAtom } from '../../state/calendar-emphasized'
 import { ANALYTICS_EVENTS } from '../../lib/analytics'
+import { useSignupEntry } from '../../features/marketing/signup-entry'
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
 import ArrowUpRightIcon from "lucide-react/dist/esm/icons/arrow-up-right";
 
@@ -189,6 +190,7 @@ export const Route = createFileRoute('/(marketing)/')({
 function MarketingPage() {
   const setEmphasized = useSetAtom(calendarEmphasizedAtom)
   const githubStars = useLoaderData({ from: '/(marketing)' })
+  const { signupPath } = useSignupEntry()
 
   return (
     <div className="flex flex-col gap-2 pt-8">
@@ -199,7 +201,7 @@ function MarketingPage() {
       <div className="contents *:z-20">
         <div className="flex items-center gap-2 mx-auto pt-1">
           <LinkButton
-            to="/register"
+            to={signupPath}
             size="compact"
             onMouseEnter={() => setEmphasized(true)}
             onMouseLeave={() => setEmphasized(false)}
@@ -385,7 +387,7 @@ function MarketingPage() {
                 Free for two calendar accounts. No credit card.
               </Text>
               <div className="flex items-center gap-2 mt-2">
-                <LinkButton to="/register" size="compact" variant="inverse" data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked} data-visitors-cta="bottom">
+                <LinkButton to={signupPath} size="compact" variant="inverse" data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked} data-visitors-cta="bottom">
                   <ButtonText>Sync Calendars</ButtonText>
                   <ButtonIcon>
                     <ArrowRightIcon size={16} />

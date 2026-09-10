@@ -29,6 +29,7 @@ import {
 } from "@/features/marketing/mcp-documentation";
 import { jsonLdScript, seoHead, webPageSchema, breadcrumbSchema, breadcrumbTrail } from "@/lib/seo";
 import { ANALYTICS_EVENTS } from "@/lib/analytics";
+import { useSignupEntry } from "@/features/marketing/signup-entry";
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
 import ArrowUpRightIcon from "lucide-react/dist/esm/icons/arrow-up-right";
 
@@ -118,6 +119,7 @@ function Code({ children }: { children: ReactNode }) {
 }
 
 function McpDocumentationPage() {
+  const { signupPath } = useSignupEntry();
   return (
     <div className="flex flex-col gap-10 py-16">
       <Breadcrumb items={breadcrumbs} />
@@ -349,7 +351,7 @@ function McpDocumentationPage() {
           </Text>
           <div className="flex items-center gap-2 mt-2">
             <LinkButton
-              to="/register"
+              to={signupPath}
               size="compact"
               variant="inverse"
               data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked}

@@ -9,11 +9,23 @@ import { SessionSlot } from '../../components/ui/shells/session-slot';
 import HeartIcon from "lucide-react/dist/esm/icons/heart";
 import { ExternalTextLink } from "@/components/ui/primitives/text-link";
 import { CookieConsent } from "@/components/consent-banner";
+import { fetchAuthCapabilitiesWithApi, offersSeparateSignup, type AuthCapabilities } from "@/lib/auth-capabilities";
 
 interface GithubStarsLoaderData {
   count: number | null;
   fetchedAt: string | null;
 }
+
+const FALLBACK_AUTH_CAPABILITIES = {
+  allowedSignupDomains: [],
+  commercialMode: true,
+  credentialMode: "email",
+  requiresEmailVerification: true,
+  socialProviders: { google: false, microsoft: false },
+  supportsChangePassword: true,
+  supportsPasskeys: false,
+  supportsPasswordReset: true,
+} as const satisfies AuthCapabilities;
 
 export const Route = createFileRoute('/(marketing)')({
   beforeLoad: ({ context }) => {
@@ -23,14 +35,18 @@ export const Route = createFileRoute('/(marketing)')({
     }
   },
   loader: async ({ context }) => {
-    try {
-      return await context.fetchWeb<GithubStarsLoaderData>("/internal/github-stars");
-    } catch {
-      return {
+    const [githubStars, authCapabilities] = await Promise.all([
+      context.fetchWeb<GithubStarsLoaderData>("/internal/github-stars").catch(() => ({
         count: null,
         fetchedAt: null,
-      } satisfies GithubStarsLoaderData;
-    }
+      } satisfies GithubStarsLoaderData)),
+      fetchAuthCapabilitiesWithApi(context.fetchApi).catch(() => FALLBACK_AUTH_CAPABILITIES),
+    ]);
+
+    return {
+      ...githubStars,
+      authCapabilities,
+    };
   },
   head: () => ({
     scripts: [jsonLdScript(organizationSchema)],
@@ -39,6 +55,9 @@ export const Route = createFileRoute('/(marketing)')({
 })
 
 function MarketingLayout() {
+  const { authCapabilities } = Route.useLoaderData();
+  const offerRegister = offersSeparateSignup(authCapabilities);
+
   return (
     <>
       <MarketingHeader>
@@ -61,9 +80,11 @@ function MarketingLayout() {
                       <ButtonText>Login</ButtonText>
                     </LinkButton>
                   </span>
-                  <LinkButton size="compact" variant="highlight" to="/register">
-                    <ButtonText>Register</ButtonText>
-                  </LinkButton>
+                  {offerRegister && (
+                    <LinkButton size="compact" variant="highlight" to="/register">
+                      <ButtonText>Register</ButtonText>
+                    </LinkButton>
+                  )}
                 </>
               }
             />
@@ -95,7 +116,9 @@ function MarketingLayout() {
           <MarketingFooterNav>
             <MarketingFooterNavGroup>
               <MarketingFooterNavGroupLabel>Product</MarketingFooterNavGroupLabel>
-              <MarketingFooterNavItem to="/register">Create an Account</MarketingFooterNavItem>
+              {offerRegister && (
+                <MarketingFooterNavItem to="/register">Create an Account</MarketingFooterNavItem>
+              )}
               <MarketingFooterNavItem to="/features">Features</MarketingFooterNavItem>
               <MarketingFooterNavItem to="/pricing">Pricing</MarketingFooterNavItem>
               <MarketingFooterNavItem to="/self-hosting">Self-Hosting</MarketingFooterNavItem>

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AuthForm, type AuthScreenCopy } from "@/features/auth/components/auth-form";
-import { fetchAuthCapabilitiesWithApi } from "@/lib/auth-capabilities";
+import { fetchAuthCapabilitiesWithApi, type AuthCapabilities } from "@/lib/auth-capabilities";
 import {
   getMcpAuthorizationSearch,
   toStringSearchParams,
@@ -23,6 +23,20 @@ const copy: AuthScreenCopy = {
   action: "signIn",
 };
 
+const socialOnlyCopy: AuthScreenCopy = {
+  ...copy,
+  heading: "Sign in to Keeper",
+  subtitle: "Continue with your account",
+};
+
+const resolveLoginCopy = (capabilities: AuthCapabilities): AuthScreenCopy => {
+  if (capabilities.credentialMode === "none") {
+    return socialOnlyCopy;
+  }
+
+  return copy;
+};
+
 function LoginPage() {
   const capabilities = Route.useLoaderData();
   const search = Route.useSearch();
@@ -30,7 +44,7 @@ function LoginPage() {
   return (
     <AuthForm
       capabilities={capabilities}
-      copy={copy}
+      copy={resolveLoginCopy(capabilities)}
       authorizationSearch={getMcpAuthorizationSearch(search) ?? undefined}
     />
   );

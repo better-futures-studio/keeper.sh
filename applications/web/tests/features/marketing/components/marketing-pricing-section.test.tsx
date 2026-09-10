@@ -4,6 +4,9 @@ import { parseHTML } from "linkedom";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, ...props }: React.ComponentPropsWithoutRef<"a">) => <a {...props}>{children}</a>,
+  useLoaderData: () => ({
+    authCapabilities: { credentialMode: "email" },
+  }),
 }));
 
 let MarketingPricingPlanCard: typeof import("../../../../src/features/marketing/components/marketing-pricing-section").MarketingPricingPlanCard;

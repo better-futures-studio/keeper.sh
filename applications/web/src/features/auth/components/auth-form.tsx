@@ -16,6 +16,7 @@ import { authClient } from "@/lib/auth-client";
 import {
   formatAllowedSignupDomainsHint,
   getEnabledSocialProviders,
+  offersSeparateSignup,
   resolveCredentialField,
   type AuthCapabilities,
 } from "@/lib/auth-capabilities";
@@ -143,12 +144,14 @@ export function AuthForm({
       )}
       <div className="flex flex-col gap-1.5">
         <AuthError />
-        <AuthSwitchPrompt>
-          {copy.switchPrompt}{" "}
-          <ExternalTextLink href={switchHref}>
-            {copy.switchCta}
-          </ExternalTextLink>
-        </AuthSwitchPrompt>
+        {offersSeparateSignup(capabilities) && (
+          <AuthSwitchPrompt>
+            {copy.switchPrompt}{" "}
+            <ExternalTextLink href={switchHref}>
+              {copy.switchCta}
+            </ExternalTextLink>
+          </AuthSwitchPrompt>
+        )}
       </div>
     </>
   );

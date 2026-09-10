@@ -8,6 +8,7 @@ import { MarketingCtaCard, MarketingCtaSection } from "@/features/marketing/comp
 import { canonicalUrl, jsonLdScript, seoMeta, webPageSchema, breadcrumbSchema, breadcrumbTrail, personSchema } from "@/lib/seo";
 import { Breadcrumb } from "@/components/ui/primitives/breadcrumb";
 import { ANALYTICS_EVENTS } from "@/lib/analytics";
+import { useSignupEntry } from "@/features/marketing/signup-entry";
 import ArrowRightIcon from "lucide-react/dist/esm/icons/arrow-right";
 import ArrowUpRightIcon from "lucide-react/dist/esm/icons/arrow-up-right";
 
@@ -47,6 +48,7 @@ export const Route = createFileRoute("/(marketing)/about")({
 });
 
 function AboutPage() {
+  const { signupPath } = useSignupEntry();
   return (
     <div className="flex flex-col gap-6 py-16">
       <Breadcrumb items={breadcrumbs} />
@@ -146,7 +148,7 @@ function AboutPage() {
           </Text>
           <div className="flex items-center gap-2 mt-2">
             <LinkButton
-              to="/register"
+              to={signupPath}
               size="compact"
               variant="inverse"
               data-visitors-event={ANALYTICS_EVENTS.marketing_cta_clicked}

@@ -193,6 +193,17 @@ describe("AuthForm", () => {
     expect(markup).not.toContain('name="email"');
     expect(markup).not.toContain('name="username"');
     expect(markup).not.toContain("Forgot password?");
+    expect(markup).not.toContain("have an account yet?");
+    expect(markup).not.toContain("Register");
+    expect(markup).not.toContain('href="/register"');
+  });
+
+  it("keeps the register switch when credential login is available", () => {
+    const markup = renderToStaticMarkup(<AuthForm capabilities={capabilities} copy={copy} />);
+
+    expect(markup).toContain("have an account yet?");
+    expect(markup).toContain("Register");
+    expect(markup).toContain('href="/register"');
   });
 
   it("uses conventional field ids, names, and labels for sign-in heuristics", () => {

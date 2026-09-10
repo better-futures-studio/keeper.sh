@@ -3,6 +3,7 @@ import { tv, type VariantProps } from "tailwind-variants/lite";
 import { Heading2, Heading3 } from "@/components/ui/primitives/heading";
 import { Text } from "@/components/ui/primitives/text";
 import { ButtonText, LinkButton } from "@/components/ui/primitives/button";
+import { useSignupEntry } from "../signup-entry";
 import CheckIcon from "lucide-react/dist/esm/icons/check";
 import InfinityIcon from "lucide-react/dist/esm/icons/infinity";
 import MinusIcon from "lucide-react/dist/esm/icons/minus";
@@ -154,6 +155,7 @@ export function MarketingPricingPlanCard({
   ctaLabel,
   features,
 }: MarketingPricingPlanCardProps) {
+  const { signupPath } = useSignupEntry();
   const copyTone = resolveCopyTone(tone);
 
   return (
@@ -189,7 +191,7 @@ export function MarketingPricingPlanCard({
         )}
       </MarketingPricingCardBody>
       <MarketingPricingCardAction>
-        <LinkButton variant="border" className={pricingPlanButton({ tone })} to="/register">
+        <LinkButton variant="border" className={pricingPlanButton({ tone })} to={signupPath}>
           <ButtonText>{ctaLabel}</ButtonText>
         </LinkButton>
       </MarketingPricingCardAction>

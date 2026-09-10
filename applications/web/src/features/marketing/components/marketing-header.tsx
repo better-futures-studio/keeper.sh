@@ -9,6 +9,7 @@ import { LayoutRow } from "@/components/ui/shells/layout";
 import { Button } from "@/components/ui/primitives/button";
 import { StaggeredBackdropBlur } from "@/components/ui/primitives/staggered-backdrop-blur";
 import { SessionSlot } from "@/components/ui/shells/session-slot";
+import { useSignupEntry } from "../signup-entry";
 
 const MENU_ID = "marketing-header-menu";
 
@@ -59,6 +60,7 @@ export function MarketingHeaderNav() {
 }
 
 export function MarketingHeaderMenu() {
+  const { offerRegister } = useSignupEntry();
   const [expanded, setExpanded] = useState(false);
 
   const close = useCallback(() => setExpanded(false), []);
@@ -120,9 +122,11 @@ export function MarketingHeaderMenu() {
                       <Link to="/login" onClick={close} className={overlayNavItem()}>
                         Login
                       </Link>
-                      <Link to="/register" onClick={close} className={overlayNavItem()}>
-                        Register
-                      </Link>
+                      {offerRegister && (
+                        <Link to="/register" onClick={close} className={overlayNavItem()}>
+                          Register
+                        </Link>
+                      )}
                     </>
                   }
                 />

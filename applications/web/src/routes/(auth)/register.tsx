@@ -1,13 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AuthForm, type AuthScreenCopy } from "@/features/auth/components/auth-form";
-import { fetchAuthCapabilitiesWithApi } from "@/lib/auth-capabilities";
+import { fetchAuthCapabilitiesWithApi, offersSeparateSignup } from "@/lib/auth-capabilities";
 import {
   getMcpAuthorizationSearch,
   toStringSearchParams,
 } from "@/lib/mcp-auth-flow";
 
 export const Route = createFileRoute("/(auth)/register")({
-  loader: ({ context }) => fetchAuthCapabilitiesWithApi(context.fetchApi),
+  loader: async ({ context, search }) => {
+    const capabilities = await fetchAuthCapabilitiesWithApi(context.fetchApi);
+    if (!offersSeparateSignup(capabilities)) {
+      throw redirect({ to: "/login", search });
+    }
+    return capabilities;
+  },
   component: RegisterPage,
   validateSearch: toStringSearchParams,
 });

@@ -5,6 +5,9 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to, ...props }: React.ComponentPropsWithoutRef<"a"> & { to?: string }) => (
     <a href={to} {...props}>{children}</a>
   ),
+  useLoaderData: () => ({
+    authCapabilities: { credentialMode: "email" },
+  }),
   useLocation: () => ({ pathname: "/" }),
 }));
 

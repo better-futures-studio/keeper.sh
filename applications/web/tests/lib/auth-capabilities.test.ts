@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   formatAllowedSignupDomainsHint,
   getEnabledSocialProviders,
+  offersSeparateSignup,
   resolveCredentialField,
+  resolveSignupPath,
   supportsPasskeys,
   type AuthCapabilities,
 } from "../../src/lib/auth-capabilities";
@@ -60,6 +62,36 @@ describe("supportsPasskeys", () => {
       ...emailCapabilities,
       supportsPasskeys: false,
     })).toBe(false);
+  });
+});
+
+describe("offersSeparateSignup", () => {
+  it("is true when credential login is available", () => {
+    expect(offersSeparateSignup(emailCapabilities)).toBe(true);
+    expect(offersSeparateSignup({
+      ...emailCapabilities,
+      credentialMode: "username",
+    })).toBe(true);
+  });
+
+  it("is false when credential login is disabled", () => {
+    expect(offersSeparateSignup({
+      ...emailCapabilities,
+      credentialMode: "none",
+    })).toBe(false);
+  });
+});
+
+describe("resolveSignupPath", () => {
+  it("keeps /register when credential login is available", () => {
+    expect(resolveSignupPath(emailCapabilities)).toBe("/register");
+  });
+
+  it("sends sign-up traffic to /login when credential login is disabled", () => {
+    expect(resolveSignupPath({
+      ...emailCapabilities,
+      credentialMode: "none",
+    })).toBe("/login");
   });
 });
 
