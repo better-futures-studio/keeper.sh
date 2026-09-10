@@ -3,7 +3,7 @@ import env from "./env";
 import { createDatabase } from "@keeper.sh/database";
 import { syncStatusTable } from "@keeper.sh/database/schema";
 import Redis from "ioredis";
-import { createAuth } from "@keeper.sh/auth";
+import { createAuth, parseAllowedSignupDomains, parseSocialLoginProviders } from "@keeper.sh/auth";
 import { createBroadcastService } from "@keeper.sh/broadcast";
 import { createPremiumService } from "@keeper.sh/premium";
 import {
@@ -62,11 +62,14 @@ const parseTrustedOrigins = (origins?: string): string[] => {
 };
 
 const trustedOrigins = parseTrustedOrigins(env.TRUSTED_ORIGINS);
+const allowedSignupDomains = parseAllowedSignupDomains(env.ALLOWED_SIGNUP_DOMAINS);
+const socialLoginProviders = parseSocialLoginProviders(env.SOCIAL_LOGIN_PROVIDERS);
 
 const { auth, capabilities: authCapabilities } = createAuth({
   database,
   secret: env.BETTER_AUTH_SECRET,
   baseUrl: env.BETTER_AUTH_URL,
+  allowedSignupDomains,
   commercialMode: env.COMMERCIAL_MODE ?? false,
   polarAccessToken: env.POLAR_ACCESS_TOKEN,
   polarMode: env.POLAR_MODE,
@@ -78,6 +81,7 @@ const { auth, capabilities: authCapabilities } = createAuth({
   passkeyRpId: env.PASSKEY_RP_ID,
   passkeyRpName: env.PASSKEY_RP_NAME,
   passkeyOrigin: env.PASSKEY_ORIGIN,
+  socialLoginProviders,
   mcpResourceUrl: env.MCP_PUBLIC_URL,
   mcpApiBaseUrl: env.MCP_API_URL,
   ...(trustedOrigins.length > MIN_TRUSTED_ORIGINS_COUNT && { trustedOrigins }),

@@ -16,6 +16,7 @@ const ENTITLEMENTS_PATH = "/api/entitlements";
 const CAPABILITIES_PATH = "/api/auth/capabilities";
 
 const capabilitiesBody = {
+  allowedSignupDomains: [],
   commercialMode: true,
   credentialMode: "email",
   requiresEmailVerification: true,

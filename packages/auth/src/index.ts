@@ -1,6 +1,6 @@
 import { type } from "arktype";
 import { betterAuth } from "better-auth";
-import { createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { signJWT } from "better-auth/crypto";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { jwt as jwtPlugin } from "better-auth/plugins";
@@ -14,6 +14,12 @@ import { usernameOnly } from "./plugins/username-only";
 import { deletePolarCustomerByExternalId } from "./polar-customer-delete";
 import { writeAuthStderr } from "./runtime-environment";
 import { resolveAuthCapabilities } from "./capabilities";
+import {
+  formatSignupDomainLimitMessage,
+  isSignupEmailAllowed,
+  isSocialLoginEnabled,
+  type SocialLoginProviderId,
+} from "./signup-restrictions";
 import {
   createUnverifiedRegistrationReclaim,
   readSignUpBody,
@@ -51,6 +57,7 @@ interface AuthConfig {
   database: BunSQLDatabase;
   secret: string;
   baseUrl: string;
+  allowedSignupDomains?: string[];
   commercialMode?: boolean;
   polarAccessToken?: string;
   polarMode?: "sandbox" | "production";
@@ -62,6 +69,7 @@ interface AuthConfig {
   passkeyRpId?: string;
   passkeyRpName?: string;
   passkeyOrigin?: string;
+  socialLoginProviders?: readonly SocialLoginProviderId[];
   trustedOrigins?: string[];
   mcpResourceUrl?: string;
   mcpApiBaseUrl?: string;
@@ -131,6 +139,8 @@ const createAuth = (config: AuthConfig) => {
     passkeyRpId,
     passkeyRpName,
     passkeyOrigin,
+    allowedSignupDomains = [],
+    socialLoginProviders,
     trustedOrigins,
     mcpResourceUrl,
     mcpApiBaseUrl,
@@ -145,6 +155,7 @@ const createAuth = (config: AuthConfig) => {
 
   const resend = buildResendClient();
   const capabilities = resolveAuthCapabilities({
+    allowedSignupDomains,
     commercialMode,
     googleClientId,
     googleClientSecret,
@@ -152,7 +163,18 @@ const createAuth = (config: AuthConfig) => {
     microsoftClientSecret,
     passkeyOrigin,
     passkeyRpId,
+    socialLoginProviders,
   });
+
+  const assertSignupEmailAllowed = (email?: string): void => {
+    if (isSignupEmailAllowed(email, allowedSignupDomains)) {
+      return;
+    }
+
+    throw new APIError("FORBIDDEN", {
+      message: formatSignupDomainLimitMessage(allowedSignupDomains),
+    });
+  };
 
   const plugins: BetterAuthPlugin[] = [];
 
@@ -218,7 +240,11 @@ const createAuth = (config: AuthConfig) => {
 
   const socialProviders: Parameters<typeof betterAuth>[0]["socialProviders"] = {};
 
-  if (googleClientId && googleClientSecret) {
+  if (
+    googleClientId &&
+    googleClientSecret &&
+    isSocialLoginEnabled("google", socialLoginProviders)
+  ) {
     socialProviders.google = {
       accessType: "offline",
       clientId: googleClientId,
@@ -228,7 +254,11 @@ const createAuth = (config: AuthConfig) => {
     };
   }
 
-  if (microsoftClientId && microsoftClientSecret) {
+  if (
+    microsoftClientId &&
+    microsoftClientSecret &&
+    isSocialLoginEnabled("microsoft", socialLoginProviders)
+  ) {
     socialProviders.microsoft = {
       clientId: microsoftClientId,
       clientSecret: microsoftClientSecret,
@@ -278,6 +308,16 @@ const createAuth = (config: AuthConfig) => {
     },
     basePath: AUTH_BASE_PATH,
     baseURL: baseUrl,
+    databaseHooks: {
+      user: {
+        create: {
+          before: (user) => {
+            assertSignupEmailAllowed(user.email);
+            return Promise.resolve({ data: user });
+          },
+        },
+      },
+    },
     database: drizzleAdapter(database, {
       provider: "pg",
       schema: {
@@ -336,7 +376,12 @@ const createAuth = (config: AuthConfig) => {
       sendVerificationEmail,
     },
     hooks: {
-      before: createAuthMiddleware(() => Promise.resolve()),
+      before: createAuthMiddleware((ctx) => {
+        if (ctx.path === "/username-only/sign-up") {
+          assertSignupEmailAllowed();
+        }
+        return Promise.resolve();
+      }),
     },
     onAPIError: {
       onError(error: unknown) {
@@ -460,6 +505,10 @@ export {
   isKeeperMcpEnabledAuth,
 };
 export { resolveAuthCapabilities } from "./capabilities";
+export {
+  parseAllowedSignupDomains,
+  parseSocialLoginProviders,
+} from "./signup-restrictions";
 export {
   KEEPER_API_DEFAULT_SCOPE,
   KEEPER_API_DESTINATION_SCOPE,

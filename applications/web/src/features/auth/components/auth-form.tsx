@@ -14,6 +14,7 @@ import {
 } from "@/state/auth-form";
 import { authClient } from "@/lib/auth-client";
 import {
+  formatAllowedSignupDomainsHint,
   getEnabledSocialProviders,
   resolveCredentialField,
   type AuthCapabilities,
@@ -105,6 +106,7 @@ export function AuthForm({
   authorizationSearch?: StringSearchParams;
 }) {
   const hasSocialProviders = getEnabledSocialProviders(capabilities).length > 0;
+  const signupDomainHint = formatAllowedSignupDomainsHint(capabilities.allowedSignupDomains);
   const switchSearch = resolveSwitchSearch(authorizationSearch);
   const switchHref = resolvePathWithSearch(copy.switchTo, switchSearch);
 
@@ -116,6 +118,9 @@ export function AuthForm({
       <div className="flex flex-col py-2">
         <Heading2 as="span" className="text-center">{copy.heading}</Heading2>
         <Text size="sm" tone="muted" align="center">{copy.subtitle}</Text>
+        {signupDomainHint && (
+          <Text size="sm" tone="muted" align="center">{signupDomainHint}</Text>
+        )}
       </div>
       {hasSocialProviders && (
         <>

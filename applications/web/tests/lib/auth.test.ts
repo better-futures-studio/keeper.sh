@@ -20,6 +20,7 @@ let signInWithCredential: typeof import("../../src/lib/auth").signInWithCredenti
 let signUpWithCredential: typeof import("../../src/lib/auth").signUpWithCredential;
 
 const commercialCapabilities: AuthCapabilities = {
+  allowedSignupDomains: [],
   commercialMode: true,
   credentialMode: "email",
   requiresEmailVerification: true,

@@ -1,6 +1,7 @@
 import arkenv from "arkenv";
 
 const schema = {
+  ALLOWED_SIGNUP_DOMAINS: "string?",
   API_PORT: "number",
   BETTER_AUTH_SECRET: "string",
   BETTER_AUTH_URL: "string.url",
@@ -23,6 +24,7 @@ const schema = {
   POLAR_WEBHOOK_SECRET: "string?",
   REDIS_URL: "string.url",
   RESEND_API_KEY: "string?",
+  SOCIAL_LOGIN_PROVIDERS: "string?",
   PRIVATE_RESOLUTION_WHITELIST: "string?",
   BLOCK_PRIVATE_RESOLUTION: "boolean?",
   TRUSTED_ORIGINS: "string?",

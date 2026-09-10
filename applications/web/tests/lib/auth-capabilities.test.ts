@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatAllowedSignupDomainsHint,
   getEnabledSocialProviders,
   resolveCredentialField,
   supportsPasskeys,
@@ -7,6 +8,7 @@ import {
 } from "../../src/lib/auth-capabilities";
 
 const emailCapabilities: AuthCapabilities = {
+  allowedSignupDomains: [],
   commercialMode: true,
   credentialMode: "email",
   requiresEmailVerification: true,
@@ -58,5 +60,23 @@ describe("supportsPasskeys", () => {
       ...emailCapabilities,
       supportsPasskeys: false,
     })).toBe(false);
+  });
+});
+
+describe("formatAllowedSignupDomainsHint", () => {
+  it("returns null when no domains are configured", () => {
+    expect(formatAllowedSignupDomainsHint([])).toBeNull();
+  });
+
+  it("names a single allowed domain", () => {
+    expect(formatAllowedSignupDomainsHint(["heyjet.ai"])).toBe(
+      "Sign-ups are limited to @heyjet.ai accounts",
+    );
+  });
+
+  it("joins multiple domains with a comma", () => {
+    expect(formatAllowedSignupDomainsHint(["heyjet.ai", "example.com"])).toBe(
+      "Sign-ups are limited to @heyjet.ai, @example.com accounts",
+    );
   });
 });

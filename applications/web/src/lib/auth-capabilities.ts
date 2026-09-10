@@ -63,6 +63,16 @@ const getEnabledSocialProviders = (
 const supportsPasskeys = (capabilities: AuthCapabilities): boolean =>
   capabilities.supportsPasskeys;
 
+const formatAllowedSignupDomainsHint = (
+  domains: readonly string[],
+): string | null => {
+  if (domains.length === 0) {
+    return null;
+  }
+
+  return `Sign-ups are limited to ${domains.map((domain) => `@${domain}`).join(", ")} accounts`;
+};
+
 const fetchAuthCapabilitiesWithApi = async (
   fetchApi: AppJsonFetcher,
 ): Promise<AuthCapabilities> => {
@@ -72,6 +82,7 @@ const fetchAuthCapabilitiesWithApi = async (
 
 export {
   fetchAuthCapabilitiesWithApi,
+  formatAllowedSignupDomainsHint,
   getEnabledSocialProviders,
   resolveCredentialField,
   supportsPasskeys,

@@ -102,6 +102,7 @@ beforeAll(async () => {
 });
 
 const capabilities: AuthCapabilities = {
+  allowedSignupDomains: [],
   commercialMode: true,
   credentialMode: "email",
   requiresEmailVerification: true,
@@ -149,6 +150,23 @@ describe("AuthForm", () => {
 
     expect(markup).toContain('name="password"');
     expect(markup).toContain('autoComplete="current-password"');
+  });
+
+  it("shows a muted signup-domain hint when an allowlist is configured", () => {
+    const markup = renderToStaticMarkup(
+      <AuthForm
+        capabilities={{ ...capabilities, allowedSignupDomains: ["heyjet.ai"] }}
+        copy={copy}
+      />,
+    );
+
+    expect(markup).toContain("Sign-ups are limited to @heyjet.ai accounts");
+  });
+
+  it("hides the signup-domain hint when the allowlist is empty", () => {
+    const markup = renderToStaticMarkup(<AuthForm capabilities={capabilities} copy={copy} />);
+
+    expect(markup).not.toContain("Sign-ups are limited to");
   });
 
   it("uses conventional field ids, names, and labels for sign-in heuristics", () => {

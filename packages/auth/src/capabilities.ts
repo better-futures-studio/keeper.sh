@@ -1,7 +1,12 @@
 import { authCapabilitiesSchema } from "@keeper.sh/data-schemas";
 import type { AuthCapabilities } from "@keeper.sh/data-schemas";
+import {
+  isSocialLoginEnabled,
+  type SocialLoginProviderId,
+} from "./signup-restrictions";
 
 interface ResolveAuthCapabilitiesConfig {
+  allowedSignupDomains?: string[];
   commercialMode?: boolean;
   googleClientId?: string;
   googleClientSecret?: string;
@@ -9,6 +14,7 @@ interface ResolveAuthCapabilitiesConfig {
   microsoftClientSecret?: string;
   passkeyRpId?: string;
   passkeyOrigin?: string;
+  socialLoginProviders?: readonly SocialLoginProviderId[];
 }
 
 const hasOAuthCredentials = (clientId?: string, clientSecret?: string): boolean =>
@@ -28,12 +34,17 @@ const resolveAuthCapabilities = (
   config: ResolveAuthCapabilitiesConfig,
 ): AuthCapabilities =>
   authCapabilitiesSchema.assert({
+    allowedSignupDomains: config.allowedSignupDomains ?? [],
     commercialMode: config.commercialMode ?? false,
     credentialMode: resolveCredentialMode(config.commercialMode),
     requiresEmailVerification: config.commercialMode ?? false,
     socialProviders: {
-      google: hasOAuthCredentials(config.googleClientId, config.googleClientSecret),
-      microsoft: hasOAuthCredentials(config.microsoftClientId, config.microsoftClientSecret),
+      google:
+        hasOAuthCredentials(config.googleClientId, config.googleClientSecret) &&
+        isSocialLoginEnabled("google", config.socialLoginProviders),
+      microsoft:
+        hasOAuthCredentials(config.microsoftClientId, config.microsoftClientSecret) &&
+        isSocialLoginEnabled("microsoft", config.socialLoginProviders),
     },
     supportsChangePassword: true,
     supportsPasskeys: Boolean(
