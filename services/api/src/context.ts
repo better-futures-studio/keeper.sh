@@ -71,6 +71,7 @@ const { auth, capabilities: authCapabilities } = createAuth({
   baseUrl: env.BETTER_AUTH_URL,
   allowedSignupDomains,
   commercialMode: env.COMMERCIAL_MODE ?? false,
+  credentialLoginEnabled: env.CREDENTIAL_LOGIN_ENABLED ?? true,
   polarAccessToken: env.POLAR_ACCESS_TOKEN,
   polarMode: env.POLAR_MODE,
   googleClientId: env.GOOGLE_CLIENT_ID,

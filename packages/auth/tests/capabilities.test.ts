@@ -81,6 +81,60 @@ describe("resolveAuthCapabilities", () => {
     expect(capabilities.allowedSignupDomains).toEqual(["heyjet.ai", "example.com"]);
   });
 
+  it("reports none mode and disables password features when credential login is off", () => {
+    const capabilities = resolveAuthCapabilities({
+      commercialMode: true,
+      credentialLoginEnabled: false,
+      googleClientId: "google-client-id",
+      googleClientSecret: "google-client-secret",
+      passkeyOrigin: "https://keeper.sh",
+      passkeyRpId: "keeper.sh",
+    });
+
+    expect(capabilities).toEqual({
+      allowedSignupDomains: [],
+      commercialMode: true,
+      credentialMode: "none",
+      requiresEmailVerification: true,
+      socialProviders: {
+        google: true,
+        microsoft: false,
+      },
+      supportsChangePassword: false,
+      supportsPasskeys: true,
+      supportsPasswordReset: false,
+    });
+  });
+
+  it("fails fast when credential login is disabled and no social provider is enabled", () => {
+    expect(() =>
+      createAuth({
+        baseUrl: "http://localhost:3000",
+        credentialLoginEnabled: false,
+        database: {} as BunSQLDatabase,
+        secret: "test-secret-for-credential-login-disabled",
+      }),
+    ).toThrow(
+      "CREDENTIAL_LOGIN_ENABLED is false but no social login provider is enabled. Configure Google or Microsoft credentials, and include that provider in SOCIAL_LOGIN_PROVIDERS if that list is set.",
+    );
+  });
+
+  it("fails fast when credential login is disabled and SOCIAL_LOGIN_PROVIDERS filters out every provider", () => {
+    expect(() =>
+      createAuth({
+        baseUrl: "http://localhost:3000",
+        credentialLoginEnabled: false,
+        database: {} as BunSQLDatabase,
+        googleClientId: "google-client-id",
+        googleClientSecret: "google-client-secret",
+        secret: "test-secret-for-credential-login-disabled",
+        socialLoginProviders: ["microsoft"],
+      }),
+    ).toThrow(
+      "CREDENTIAL_LOGIN_ENABLED is false but no social login provider is enabled. Configure Google or Microsoft credentials, and include that provider in SOCIAL_LOGIN_PROVIDERS if that list is set.",
+    );
+  });
+
   it("does not register an unlisted social provider on the auth instance", () => {
     const { auth, capabilities } = createAuth({
       baseUrl: "http://localhost:3000",

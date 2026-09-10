@@ -59,6 +59,7 @@ interface AuthConfig {
   baseUrl: string;
   allowedSignupDomains?: string[];
   commercialMode?: boolean;
+  credentialLoginEnabled?: boolean;
   polarAccessToken?: string;
   polarMode?: "sandbox" | "production";
   googleClientId?: string;
@@ -122,6 +123,99 @@ const mcpJwtClaimsSchema = type({
 
 const AUTH_BASE_PATH = "/api/auth";
 const EMAIL_VERIFICATION_EXPIRES_IN_SECONDS = 3600;
+const CREDENTIAL_LOGIN_DISABLED_MESSAGE = "Credential login is disabled";
+
+const DISABLED_CREDENTIAL_LOGIN_PATHS = new Set([
+  "/change-password",
+  "/forget-password",
+  "/request-password-reset",
+  "/reset-password",
+  "/sign-in/email",
+  "/sign-in/username",
+  "/sign-up/email",
+]);
+
+const isDisabledCredentialLoginPath = (path: string): boolean => {
+  if (DISABLED_CREDENTIAL_LOGIN_PATHS.has(path)) {
+    return true;
+  }
+
+  return (
+    path.startsWith("/forget-password/") ||
+    path.startsWith("/reset-password/") ||
+    path.startsWith("/username-only/")
+  );
+};
+
+const rejectCredentialLogin = (): never => {
+  throw new APIError("FORBIDDEN", {
+    message: CREDENTIAL_LOGIN_DISABLED_MESSAGE,
+  });
+};
+
+const readAuthHandlerPath = (url: string): string => {
+  const { pathname } = new URL(url);
+  if (!pathname.startsWith(AUTH_BASE_PATH)) {
+    return pathname;
+  }
+
+  const suffix = pathname.slice(AUTH_BASE_PATH.length);
+  if (suffix.length === 0) {
+    return "/";
+  }
+
+  return suffix;
+};
+
+const createCredentialLoginDisabledPlugin = (): BetterAuthPlugin => ({
+  id: "credential-login-disabled",
+  onRequest: (request) => {
+    if (!isDisabledCredentialLoginPath(readAuthHandlerPath(request.url))) {
+      return Promise.resolve();
+    }
+
+    return Promise.resolve({
+      response: Response.json(
+        { message: CREDENTIAL_LOGIN_DISABLED_MESSAGE },
+        { status: 403 },
+      ),
+    });
+  },
+});
+
+const assertSignInMethodAvailable = (
+  credentialLoginEnabled: boolean,
+  socialProviders: { google: boolean; microsoft: boolean },
+): void => {
+  if (credentialLoginEnabled) {
+    return;
+  }
+
+  if (socialProviders.google || socialProviders.microsoft) {
+    return;
+  }
+
+  throw new Error(
+    "CREDENTIAL_LOGIN_ENABLED is false but no social login provider is enabled. Configure Google or Microsoft credentials, and include that provider in SOCIAL_LOGIN_PROVIDERS if that list is set.",
+  );
+};
+
+const resolveCredentialPlugins = (
+  commercialMode: boolean,
+  credentialLoginEnabled: boolean,
+): BetterAuthPlugin[] => {
+  const plugins: BetterAuthPlugin[] = [];
+
+  if (!commercialMode && credentialLoginEnabled) {
+    plugins.push(usernameOnly());
+  }
+
+  if (!credentialLoginEnabled) {
+    plugins.push(createCredentialLoginDisabledPlugin());
+  }
+
+  return plugins;
+};
 
 const createAuth = (config: AuthConfig) => {
   const {
@@ -129,6 +223,7 @@ const createAuth = (config: AuthConfig) => {
     secret,
     baseUrl,
     commercialMode = false,
+    credentialLoginEnabled = true,
     polarAccessToken,
     polarMode,
     googleClientId,
@@ -157,6 +252,7 @@ const createAuth = (config: AuthConfig) => {
   const capabilities = resolveAuthCapabilities({
     allowedSignupDomains,
     commercialMode,
+    credentialLoginEnabled,
     googleClientId,
     googleClientSecret,
     microsoftClientId,
@@ -165,6 +261,8 @@ const createAuth = (config: AuthConfig) => {
     passkeyRpId,
     socialLoginProviders,
   });
+
+  assertSignInMethodAvailable(credentialLoginEnabled, capabilities.socialProviders);
 
   const assertSignupEmailAllowed = (email?: string): void => {
     if (isSignupEmailAllowed(email, allowedSignupDomains)) {
@@ -176,11 +274,7 @@ const createAuth = (config: AuthConfig) => {
     });
   };
 
-  const plugins: BetterAuthPlugin[] = [];
-
-  if (!commercialMode) {
-    plugins.push(usernameOnly());
-  }
+  const plugins = resolveCredentialPlugins(commercialMode, credentialLoginEnabled);
 
   const buildPolarClient = (): Polar | null => {
     if (polarAccessToken && polarMode) {
@@ -334,7 +428,7 @@ const createAuth = (config: AuthConfig) => {
       },
     }),
     emailAndPassword: {
-      enabled: commercialMode,
+      enabled: commercialMode && credentialLoginEnabled,
       onExistingUserSignUp: async ({ user }, request) => {
         if (user.emailVerified) {
           return;
@@ -377,6 +471,9 @@ const createAuth = (config: AuthConfig) => {
     },
     hooks: {
       before: createAuthMiddleware((ctx) => {
+        if (!credentialLoginEnabled && isDisabledCredentialLoginPath(ctx.path)) {
+          rejectCredentialLogin();
+        }
         if (ctx.path === "/username-only/sign-up") {
           assertSignupEmailAllowed();
         }

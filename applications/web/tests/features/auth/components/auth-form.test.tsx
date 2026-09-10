@@ -169,6 +169,32 @@ describe("AuthForm", () => {
     expect(markup).not.toContain("Sign-ups are limited to");
   });
 
+  it("renders only social buttons and the domain hint when credential login is disabled", () => {
+    const markup = renderToStaticMarkup(
+      <AuthForm
+        capabilities={{
+          ...capabilities,
+          allowedSignupDomains: ["heyjet.ai"],
+          credentialMode: "none",
+          socialProviders: {
+            google: true,
+            microsoft: false,
+          },
+          supportsChangePassword: false,
+          supportsPasswordReset: false,
+        }}
+        copy={copy}
+      />,
+    );
+
+    expect(markup).toContain("Sign in with Google");
+    expect(markup).toContain("Sign-ups are limited to @heyjet.ai accounts");
+    expect(markup).not.toContain('name="password"');
+    expect(markup).not.toContain('name="email"');
+    expect(markup).not.toContain('name="username"');
+    expect(markup).not.toContain("Forgot password?");
+  });
+
   it("uses conventional field ids, names, and labels for sign-in heuristics", () => {
     const markup = renderToStaticMarkup(<AuthForm capabilities={capabilities} copy={copy} />);
 

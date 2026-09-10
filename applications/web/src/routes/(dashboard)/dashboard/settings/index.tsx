@@ -99,7 +99,7 @@ function SettingsPage() {
         </NavigationMenuItem>
       </NavigationMenu>
       <NavigationMenu>
-        {hasPassword && (
+        {hasPassword && authCapabilities.supportsChangePassword && (
           <NavigationMenuLinkItem to="/dashboard/settings/change-password">
             <NavigationMenuItemIcon>
               <Lock size={15} />

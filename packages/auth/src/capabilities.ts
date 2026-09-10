@@ -8,6 +8,7 @@ import {
 interface ResolveAuthCapabilitiesConfig {
   allowedSignupDomains?: string[];
   commercialMode?: boolean;
+  credentialLoginEnabled?: boolean;
   googleClientId?: string;
   googleClientSecret?: string;
   microsoftClientId?: string;
@@ -22,7 +23,12 @@ const hasOAuthCredentials = (clientId?: string, clientSecret?: string): boolean 
 
 const resolveCredentialMode = (
   commercialMode?: boolean,
+  credentialLoginEnabled = true,
 ): AuthCapabilities["credentialMode"] => {
+  if (!credentialLoginEnabled) {
+    return "none";
+  }
+
   if (commercialMode) {
     return "email";
   }
@@ -32,12 +38,15 @@ const resolveCredentialMode = (
 
 const resolveAuthCapabilities = (
   config: ResolveAuthCapabilitiesConfig,
-): AuthCapabilities =>
-  authCapabilitiesSchema.assert({
+): AuthCapabilities => {
+  const credentialLoginEnabled = config.credentialLoginEnabled ?? true;
+  const commercialMode = config.commercialMode ?? false;
+
+  return authCapabilitiesSchema.assert({
     allowedSignupDomains: config.allowedSignupDomains ?? [],
-    commercialMode: config.commercialMode ?? false,
-    credentialMode: resolveCredentialMode(config.commercialMode),
-    requiresEmailVerification: config.commercialMode ?? false,
+    commercialMode,
+    credentialMode: resolveCredentialMode(commercialMode, credentialLoginEnabled),
+    requiresEmailVerification: commercialMode,
     socialProviders: {
       google:
         hasOAuthCredentials(config.googleClientId, config.googleClientSecret) &&
@@ -46,12 +55,13 @@ const resolveAuthCapabilities = (
         hasOAuthCredentials(config.microsoftClientId, config.microsoftClientSecret) &&
         isSocialLoginEnabled("microsoft", config.socialLoginProviders),
     },
-    supportsChangePassword: true,
+    supportsChangePassword: credentialLoginEnabled,
     supportsPasskeys: Boolean(
-      config.commercialMode && config.passkeyOrigin && config.passkeyRpId,
+      commercialMode && config.passkeyOrigin && config.passkeyRpId,
     ),
-    supportsPasswordReset: config.commercialMode ?? false,
+    supportsPasswordReset: commercialMode && credentialLoginEnabled,
   });
+};
 
 export { resolveAuthCapabilities };
 export type { ResolveAuthCapabilitiesConfig };

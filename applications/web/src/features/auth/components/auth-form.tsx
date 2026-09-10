@@ -106,6 +106,7 @@ export function AuthForm({
   authorizationSearch?: StringSearchParams;
 }) {
   const hasSocialProviders = getEnabledSocialProviders(capabilities).length > 0;
+  const hasCredentialForm = capabilities.credentialMode !== "none";
   const signupDomainHint = formatAllowedSignupDomainsHint(capabilities.allowedSignupDomains);
   const switchSearch = resolveSwitchSearch(authorizationSearch);
   const switchHref = resolvePathWithSearch(copy.switchTo, switchSearch);
@@ -129,15 +130,17 @@ export function AuthForm({
             oauthActionLabel={copy.oauthActionLabel}
             authorizationSearch={authorizationSearch}
           />
-          <Divider>or</Divider>
+          {hasCredentialForm && <Divider>or</Divider>}
         </>
       )}
-      <CredentialForm
-        capabilities={capabilities}
-        submitLabel={copy.submitLabel}
-        action={copy.action}
-        authorizationSearch={authorizationSearch}
-      />
+      {hasCredentialForm && (
+        <CredentialForm
+          capabilities={capabilities}
+          submitLabel={copy.submitLabel}
+          action={copy.action}
+          authorizationSearch={authorizationSearch}
+        />
+      )}
       <div className="flex flex-col gap-1.5">
         <AuthError />
         <AuthSwitchPrompt>
