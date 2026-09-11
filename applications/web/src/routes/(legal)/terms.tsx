@@ -5,19 +5,26 @@ import { Text } from "@/components/ui/primitives/text";
 
 export const Route = createFileRoute("/(legal)/terms")({
   component: TermsPage,
-  head: () => ({
-    meta: [
-      { title: "Terms & Conditions · HeyJet Calendar Sync" },
-      {
-        content:
-          "Terms of use for HeyJet, LLC's internal calendar-sync tool: who can use it, acceptable use, and the open-source license behind it.",
-        name: "description",
-      },
-    ],
-  }),
+  head: ({ match }) => {
+    const { operatorName } = match.context.runtimeConfig;
+
+    return {
+      meta: [
+        { title: `Terms & Conditions · ${operatorName} Calendar Sync` },
+        {
+          content:
+            `Terms of use for ${operatorName}'s internal calendar-sync tool: who can use it, acceptable use, and the open-source license behind it.`,
+          name: "description",
+        },
+      ],
+    };
+  },
 });
 
 function TermsPage() {
+  const { runtimeConfig } = Route.useRouteContext();
+  const { operatorName } = runtimeConfig;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
@@ -27,7 +34,7 @@ function TermsPage() {
       <div className="flex flex-col gap-8">
         <Section title="Agreement to Terms">
           <Text size="sm">
-            These Terms are an agreement between you and HeyJet, LLC (&ldquo;HeyJet&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;)
+            These Terms are an agreement between you and {operatorName} (&ldquo;{operatorName}&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;)
             governing your use of this internal calendar-sync tool. By using it, you agree to these
             Terms.
           </Text>
@@ -35,19 +42,17 @@ function TermsPage() {
 
         <Section title="Description of Service">
           <Text size="sm">
-            This tool runs at cal-sync.heyjet.ai. It reads the calendars you connect and creates
-            busy-block copies of your events on other calendars you connect, so your availability stays
-            in sync across accounts.
+            This tool reads the calendars you connect and creates busy-block copies of your events on
+            other calendars you connect, so your availability stays in sync across accounts.
           </Text>
           <Text size="sm">
-            It is a private, internal tool for HeyJet, LLC staff. It is not offered to the public, and
-            sign-in is Google only, limited to heyjet.ai accounts.
+            It is a private, internal tool for {operatorName} staff. It is not offered to the public.
           </Text>
         </Section>
 
         <Section title="Who May Use This Tool">
           <Text size="sm">
-            This tool is for authorized HeyJet staff, for work purposes. You may only connect calendars
+            This tool is for authorized {operatorName} staff, for work purposes. You may only connect calendars
             you are entitled to access. You are responsible for keeping your account credentials secure
             and for activity under your account.
           </Text>
@@ -60,19 +65,19 @@ function TermsPage() {
             <li>Attempt to gain unauthorized access to any part of the tool or its underlying systems</li>
             <li>Interfere with or disrupt the operation of the tool</li>
             <li>Connect a calendar you are not entitled to access</li>
-            <li>Share your account access with anyone outside HeyJet, LLC</li>
+            <li>Share your account access with anyone outside {operatorName}</li>
           </ul>
         </Section>
 
         <Section title="Changes to the Service">
           <Text size="sm">
-            HeyJet, LLC may change, suspend, or discontinue this tool, or any part of it, at any time.
+            {operatorName} may change, suspend, or discontinue this tool, or any part of it, at any time.
           </Text>
         </Section>
 
         <Section title="No Warranty">
           <Text size="sm">
-            This tool is provided as is, without warranties of any kind, express or implied. HeyJet, LLC
+            This tool is provided as is, without warranties of any kind, express or implied. {operatorName}{" "}
             does not warrant that it will be uninterrupted, secure, or error-free.
           </Text>
         </Section>
@@ -103,7 +108,7 @@ function TermsPage() {
 
         <Section title="Questions">
           <Text size="sm">
-            For questions about these Terms, raise them with a HeyJet administrator through the
+            For questions about these Terms, raise them with a {operatorName} administrator through the
             company&apos;s internal channels.
           </Text>
         </Section>

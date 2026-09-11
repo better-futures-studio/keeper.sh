@@ -1,14 +1,18 @@
 interface PublicRuntimeConfig {
   commercialMode: boolean;
+  operatorName: string;
   polarProMonthlyProductId: string | null;
   polarProYearlyProductId: string | null;
 }
 
 interface RuntimeConfigSource {
   commercialMode?: boolean | null;
+  operatorName?: string | null;
   polarProMonthlyProductId?: string | null;
   polarProYearlyProductId?: string | null;
 }
+
+const DEFAULT_OPERATOR_NAME = "HeyJet, LLC";
 
 const normalizeOptionalValue = (value: string | null | undefined): string | null => {
   if (typeof value !== "string") {
@@ -16,6 +20,14 @@ const normalizeOptionalValue = (value: string | null | undefined): string | null
   }
 
   return value.length > 0 ? value : null;
+};
+
+const normalizeOperatorName = (value: string | null | undefined): string => {
+  if (typeof value !== "string" || value.length === 0) {
+    return DEFAULT_OPERATOR_NAME;
+  }
+
+  return value;
 };
 
 interface ServerRuntimeConfigOptions {
@@ -29,6 +41,7 @@ const getServerPublicRuntimeConfig = (
 
   return {
     commercialMode: environment.COMMERCIAL_MODE === "true",
+    operatorName: normalizeOperatorName(environment.OPERATOR_NAME),
     polarProMonthlyProductId: normalizeOptionalValue(environment.POLAR_PRO_MONTHLY_PRODUCT_ID),
     polarProYearlyProductId: normalizeOptionalValue(environment.POLAR_PRO_YEARLY_PRODUCT_ID),
   };
@@ -44,6 +57,7 @@ const getWindowPublicRuntimeConfig = (): RuntimeConfigSource => {
 
 const resolvePublicRuntimeConfig = (source: RuntimeConfigSource): PublicRuntimeConfig => ({
   commercialMode: source.commercialMode === true,
+  operatorName: normalizeOperatorName(source.operatorName),
   polarProMonthlyProductId: normalizeOptionalValue(source.polarProMonthlyProductId),
   polarProYearlyProductId: normalizeOptionalValue(source.polarProYearlyProductId),
 });

@@ -206,6 +206,16 @@ The following environment variables are read by the `web` server at **runtime** 
 | --------------------------------- | ------------------------------------------------------------------ |
 | POLAR_PRO_MONTHLY_PRODUCT_ID      | Optional. Polar monthly product ID to power in-app upgrade links.  |
 | POLAR_PRO_YEARLY_PRODUCT_ID       | Optional. Polar yearly product ID to power in-app upgrade links.   |
+| OPERATOR_NAME                     | Optional. Legal/operator name shown on the privacy and terms pages. Defaults to `HeyJet, LLC`. |
+
+## Running a second instance
+
+To serve another company from the same code, give that deployment its own values for `BETTER_AUTH_URL`, `TRUSTED_ORIGINS`, `WEBHOOK_PUBLIC_URL`, `ALLOWED_SIGNUP_DOMAINS`, `SOCIAL_LOGIN_PROVIDERS`, `CREDENTIAL_LOGIN_ENABLED`, `OPERATOR_NAME`, `GOOGLE_*`, and `MICROSOFT_*`. Generate a fresh `BETTER_AUTH_SECRET` and `ENCRYPTION_KEY` for the instance.
+
+Register these OAuth redirect URIs on the provider consoles, under the instance's public origin:
+
+- Google: `/api/auth/callback/google` and `/api/sources/callback/google`
+- Microsoft: `/api/sources/callback/outlook`
 
 > [!NOTE]
 >

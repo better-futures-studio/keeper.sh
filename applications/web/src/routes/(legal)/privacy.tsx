@@ -5,19 +5,26 @@ import { Text } from "@/components/ui/primitives/text";
 
 export const Route = createFileRoute("/(legal)/privacy")({
   component: PrivacyPage,
-  head: () => ({
-    meta: [
-      { title: "Privacy Policy · HeyJet Calendar Sync" },
-      {
-        content:
-          "How HeyJet, LLC's internal calendar-sync tool collects, uses, and retains calendar data for HeyJet staff.",
-        name: "description",
-      },
-    ],
-  }),
+  head: ({ match }) => {
+    const { operatorName } = match.context.runtimeConfig;
+
+    return {
+      meta: [
+        { title: `Privacy Policy · ${operatorName} Calendar Sync` },
+        {
+          content:
+            `How ${operatorName}'s internal calendar-sync tool collects, uses, and retains calendar data for ${operatorName} staff.`,
+          name: "description",
+        },
+      ],
+    };
+  },
 });
 
 function PrivacyPage() {
+  const { runtimeConfig } = Route.useRouteContext();
+  const { operatorName } = runtimeConfig;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
@@ -27,9 +34,9 @@ function PrivacyPage() {
       <div className="flex flex-col gap-8">
         <Section title="Overview">
           <Text size="sm">
-            This tool is operated by HeyJet, LLC (&ldquo;HeyJet&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;). It runs at
-            cal-sync.heyjet.ai as a private, internal calendar-sync tool for HeyJet staff. Sign-in is
-            Google only, limited to heyjet.ai accounts, so only authorized HeyJet staff can use it.
+            This tool is operated by {operatorName} (&ldquo;{operatorName}&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;). It is a
+            private, internal calendar-sync tool for {operatorName} staff. Sign-in is limited to authorized
+            accounts, so only authorized {operatorName} staff can use it.
           </Text>
           <Text size="sm">
             The tool is a self-hosted build of the open-source Keeper.sh project, licensed AGPL-3.0. Its
@@ -95,13 +102,13 @@ function PrivacyPage() {
             for a limited period afterward.
           </Text>
           <Text size="sm">
-            You can ask a HeyJet administrator, through internal company channels, to delete your data.
+            You can ask a {operatorName} administrator, through internal company channels, to delete your data.
           </Text>
         </Section>
 
         <Section title="Who Can Access Your Data">
           <Text size="sm">
-            HeyJet administrators with infrastructure access can access stored data as needed to operate
+            {operatorName} administrators with infrastructure access can access stored data as needed to operate
             and support the tool. You can revoke this tool&apos;s access to your Google or Microsoft account
             at any time from that provider&apos;s account settings.
           </Text>
@@ -109,7 +116,7 @@ function PrivacyPage() {
 
         <Section title="Questions and Deletion Requests">
           <Text size="sm">
-            For questions about this policy, or to request deletion of your data, raise it with a HeyJet
+            For questions about this policy, or to request deletion of your data, raise it with a {operatorName}{" "}
             administrator through the company&apos;s internal channels.
           </Text>
         </Section>
