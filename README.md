@@ -14,6 +14,7 @@ The recommended way to run it is the hosted version at [keeper.sh](https://www.k
 - Event content agnostic syncing engine
 - Push aggregate events to one or more calendars
 - Choose which calendars to sync when you connect an account; newly connected calendars sync as private by default
+- Per-destination event color on Google (`colorId` 1–11) and Outlook (category `preset0`–`preset24`)
 - Per-source privacy controls to strip event names, descriptions, and locations, replacing the title with a `{{calendar_name}}` or `{{event_name}}` template
 - REST API under `/api/v1` authenticated with API tokens
 - MCP (Model Context Protocol) server for AI agent calendar access
@@ -261,7 +262,7 @@ Once this is configured, set the client ID and client secret as the `GOOGLE_CLIE
 >
 > Once again, this is optional. If you do not configure this, you will not be able to configure Microsoft Outlook as a destination.
 
-The clearest non-legacy walkthrough for configuring OAuth is this [community thread.](https://learn.microsoft.com/en-us/answers/questions/4705805/how-to-set-up-oauth-2-0-for-outlook). The required scopes are `Calendars.ReadWrite`, `User.Read`, and `offline_access`. The client ID and secret for Microsoft go into the `MICROSOFT_CLIENT_ID` and `MICROSOFT_CLIENT_SECRET` environment variables respectively.
+The clearest non-legacy walkthrough for configuring OAuth is this [community thread.](https://learn.microsoft.com/en-us/answers/questions/4705805/how-to-set-up-oauth-2-0-for-outlook). The required scopes are `Calendars.ReadWrite`, `MailboxSettings.ReadWrite`, `User.Read`, and `offline_access`. Existing Outlook connections must be reconnected once so Keeper.sh can create or update the mailbox master category that colors destination events. The client ID and secret for Microsoft go into the `MICROSOFT_CLIENT_ID` and `MICROSOFT_CLIENT_SECRET` environment variables respectively.
 
 ## Standalone Container
 
@@ -571,6 +572,8 @@ curl https://keeper.example.com/api/v1/calendars \
 ```
 
 `/api/v1` routes also accept a logged-in browser session or an MCP OAuth access token, so all three callers hit the same handlers. Token management itself lives at `/api/tokens` and requires a browser session rather than an API token.
+
+The dashboard talks to session-authenticated `/api/sources`. `GET /api/sources` and `GET /api/sources/{id}` include `provider`, `eventColor`, and `eventCategoryName`. `PATCH /api/sources/{id}` accepts `eventColor` and `eventCategoryName` (`null` clears). Google destinations take Calendar event color IDs `"1"`–`"11"`. Outlook destinations take category colors `"preset0"`–`"preset24"` and an optional `eventCategoryName` (1–64 characters, trimmed; default `Keeper`) so Outlook colors by that category while `keeper.sh` stays on the event as the Keeper marker. Other providers return `400` `{ "message": "Event color is not supported for this calendar" }`. Changing either field re-pushes existing events on that destination so they recolor.
 
 ## Endpoints
 

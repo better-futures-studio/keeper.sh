@@ -76,6 +76,13 @@ describe("sourcePatchBodySchema", () => {
     expect(result instanceof type.errors).toBe(false);
   });
 
+  it("accepts eventColor and eventCategoryName including null", () => {
+    expect(sourcePatchBodySchema({ eventColor: "7" }) instanceof type.errors).toBe(false);
+    expect(sourcePatchBodySchema({ eventColor: null }) instanceof type.errors).toBe(false);
+    expect(sourcePatchBodySchema({ eventCategoryName: "Work" }) instanceof type.errors).toBe(false);
+    expect(sourcePatchBodySchema({ eventCategoryName: null }) instanceof type.errors).toBe(false);
+  });
+
 
   it("rejects extra properties", () => {
     const result = sourcePatchBodySchema({ name: "ok", hacker: true });

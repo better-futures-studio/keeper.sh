@@ -14,6 +14,8 @@ import {
   intersectSyncWindows,
   overlapsTimeWindow,
 } from "@keeper.sh/calendar";
+import { createOutlookMasterCategoryCache } from "@keeper.sh/calendar/outlook";
+import type { OutlookMasterCategoryEnsureCache } from "@keeper.sh/calendar/outlook";
 import { OUTLOOK_REQUESTS_PER_MINUTE } from "@keeper.sh/constants";
 import { syncRangeSchema } from "@keeper.sh/data-schemas";
 import type { Plan } from "@keeper.sh/data-schemas";
@@ -629,6 +631,8 @@ interface SyncCallbacks {
 interface DestinationAttempt {
   accountId: string;
   calendarId: string;
+  eventCategoryName: string | null;
+  eventColor: string | null;
   failureCount: number;
   nextAttemptAt: Date | null;
   provider: string;
@@ -646,6 +650,8 @@ const getDestinationAttempt = async (
     .select({
       accountId: calendarsTable.accountId,
       calendarId: calendarsTable.id,
+      eventCategoryName: calendarsTable.eventCategoryName,
+      eventColor: calendarsTable.eventColor,
       failureCount: calendarsTable.failureCount,
       nextAttemptAt: calendarsTable.nextAttemptAt,
       provider: calendarAccountsTable.provider,
@@ -818,6 +824,18 @@ const syncDestinationsForUser = async (
   }
 
   const syncLock = createSyncLock(redis, "background");
+  const outlookMasterCategoryCaches = new Map<string, OutlookMasterCategoryEnsureCache>();
+  const outlookMasterCategoryCacheFor = (
+    accountId: string,
+  ): OutlookMasterCategoryEnsureCache => {
+    const existing = outlookMasterCategoryCaches.get(accountId);
+    if (existing) {
+      return existing;
+    }
+    const created = createOutlookMasterCategoryCache();
+    outlookMasterCategoryCaches.set(accountId, created);
+    return created;
+  };
 
   let added = 0;
   let addFailed = 0;
@@ -875,6 +893,7 @@ const syncDestinationsForUser = async (
           safeFetchOptions: config.safeFetchOptions,
           rateLimiter: createProviderRateLimiter(redis, userId, destination.provider),
           signal: config.abortSignal,
+          outlookMasterCategoryCache: outlookMasterCategoryCacheFor(destination.accountId),
         }));
         const syncProvider = providerResolve.value;
 
@@ -996,6 +1015,10 @@ const syncDestinationsForUser = async (
                       lockedDatabase,
                       [...authoritativeSourceWindows.keys()],
                       localReadWindow,
+                      {
+                        eventCategoryName: destination.eventCategoryName,
+                        eventColor: destination.eventColor,
+                      },
                     );
                     eventReadDiagnostics = eventRead.diagnostics;
                     localEvents.push(...eventRead.events);

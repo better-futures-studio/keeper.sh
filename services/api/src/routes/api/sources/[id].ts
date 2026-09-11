@@ -68,6 +68,8 @@ const GET = withWideEvent(
         ingestFailureCount: calendarsTable.ingestFailureCount,
         ingestLastFailureAt: calendarsTable.ingestLastFailureAt,
         markEventsAsPrivate: calendarsTable.markEventsAsPrivate,
+        eventColor: calendarsTable.eventColor,
+        eventCategoryName: calendarsTable.eventCategoryName,
         providerMissingSince: calendarsTable.providerMissingSince,
         createdAt: calendarsTable.createdAt,
         updatedAt: calendarsTable.updatedAt,
@@ -106,6 +108,20 @@ const PATCH = withWideEvent(
       { body: payload, params, userId },
       {
         canUseEventFilters: (candidateUserId) => premiumService.canUseEventFilters(candidateUserId),
+        getSourceProvider: async (userIdToLookup, sourceCalendarId) => {
+          const [source] = await database
+            .select({ provider: calendarAccountsTable.provider })
+            .from(calendarsTable)
+            .innerJoin(calendarAccountsTable, eq(calendarsTable.accountId, calendarAccountsTable.id))
+            .where(
+              and(
+                eq(calendarsTable.id, sourceCalendarId),
+                eq(calendarsTable.userId, userIdToLookup),
+              ),
+            )
+            .limit(1);
+          return source?.provider ?? null;
+        },
         updateSource: async (userIdToUpdate, sourceCalendarId, updates) => {
           const applyFeedMembership = async (
             client: FeedMembershipClient,
@@ -192,7 +208,14 @@ const PATCH = withWideEvent(
                 ),
               )
               .returning();
-            if (updated && "markEventsAsPrivate" in updates) {
+            if (
+              updated
+              && (
+                "markEventsAsPrivate" in updates
+                || "eventColor" in updates
+                || "eventCategoryName" in updates
+              )
+            ) {
               await requestUserSync(transaction, userIdToUpdate);
             }
             if (updated) {

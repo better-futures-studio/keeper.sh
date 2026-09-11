@@ -29,6 +29,8 @@ interface KeeperSource {
   unavailableSince: Date | null;
   disabled: boolean;
   hidden: boolean;
+  eventColor: string | null;
+  eventCategoryName: string | null;
   providerMissingSince: string | null;
   providerName: string;
   providerIcon: string | null;

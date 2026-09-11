@@ -666,6 +666,13 @@
       "when": 1789072278707,
       "tag": "0094_serious_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1789128956699,
+      "tag": "0095_wandering_garia",
+      "breakpoints": true
     }
   ]
 }

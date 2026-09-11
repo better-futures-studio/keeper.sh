@@ -21,6 +21,11 @@ export {
   type OutlookSyncProviderConfig,
 } from "./destination/provider";
 export {
+  createOutlookMasterCategoryCache,
+  ensureOutlookMasterCategory,
+  type OutlookMasterCategoryEnsureCache,
+} from "./destination/master-category";
+export {
   getOutlookAccountsByPlan,
   getOutlookAccountsForUser,
   type OutlookAccount,

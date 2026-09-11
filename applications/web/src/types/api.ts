@@ -38,6 +38,8 @@ export interface CalendarSource {
   disabled: boolean;
   providerMissingSince: string | null;
   hidden: boolean;
+  eventColor: string | null;
+  eventCategoryName: string | null;
 }
 
 export interface CalendarDetail {
@@ -71,6 +73,8 @@ export interface CalendarDetail {
   unavailableSince: string | null;
   createdAt: string;
   updatedAt: string;
+  eventColor: string | null;
+  eventCategoryName: string | null;
 }
 
 export interface ApiEvent {

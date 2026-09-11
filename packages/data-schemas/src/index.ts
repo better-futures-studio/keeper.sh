@@ -68,6 +68,7 @@ const googleEventSchema = type({
   "summary?": "string",
   "transparency?": "string",
   "visibility?": "string",
+  "colorId?": "string",
   "workingLocationProperties?": {
     "customLocation?": { "label?": "string" },
     "homeOffice?": "unknown",

@@ -55,6 +55,8 @@ function makeSource(overrides: Partial<CalendarSource> = {}): CalendarSource {
     disabled: false,
     providerMissingSince: null,
     hidden: false,
+    eventColor: null,
+    eventCategoryName: null,
     ...overrides,
   };
 }
@@ -112,6 +114,8 @@ const calendarDetail: CalendarDetail = {
   unavailableSince: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
+  eventColor: null,
+  eventCategoryName: null,
 };
 
 vi.mock("swr", () => {

@@ -33,6 +33,12 @@ import {
 import { MICROSOFT_GRAPH_API, OUTLOOK_PAGE_SIZE } from "../shared/api";
 import { parseEventTime } from "../shared/date-time";
 import { normalizeOutlookEvent } from "./normalize-event";
+import { resolveOutlookEventCategoryName } from "./event-appearance";
+import {
+  createOutlookMasterCategoryCache,
+  ensureOutlookMasterCategory,
+} from "./master-category";
+import type { OutlookMasterCategoryEnsureCache } from "./master-category";
 import { serializeOutlookEvent } from "./serialize-event";
 import { fetchWithTimeout } from "../../../core/utils/fetch-with-timeout";
 import {
@@ -50,6 +56,8 @@ interface OutlookSyncProviderConfig {
   refreshAccessToken?: TokenRefresher;
   rateLimiter?: RedisRateLimiter;
   signal?: AbortSignal;
+  masterCategoryCache?: OutlookMasterCategoryEnsureCache;
+  onMailboxSettingsForbidden?: () => Promise<void>;
 }
 
 const createCaughtFailure = (error: unknown): PushResult | DeleteResult => {
@@ -221,8 +229,29 @@ const createOutlookSyncProvider = (config: OutlookSyncProviderConfig) => {
       signal: config.signal,
     });
 
+  const masterCategoryCache = config.masterCategoryCache ?? createOutlookMasterCategoryCache();
+
+  const ensureDestinationCategory = async (
+    events: MaterializedSyncableEvent[],
+  ): Promise<void> => {
+    const colored = events.find((event) => event.eventColor);
+    if (!colored?.eventColor) {
+      return;
+    }
+
+    await ensureOutlookMasterCategory({
+      cache: masterCategoryCache,
+      color: colored.eventColor,
+      displayName: resolveOutlookEventCategoryName(colored.eventCategoryName),
+      headers: getHeaders(),
+      onForbidden: config.onMailboxSettingsForbidden,
+      send: (url, init) => sendRequestWithRetry(url, init),
+    });
+  };
+
   const pushEvents = async (events: MaterializedSyncableEvent[]): Promise<PushResult[]> => {
     await refreshIfNeeded();
+    await ensureDestinationCategory(events);
     const results: PushResult[] = [];
 
     for (const event of events) {

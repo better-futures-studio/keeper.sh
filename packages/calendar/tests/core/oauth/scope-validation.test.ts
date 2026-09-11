@@ -4,21 +4,31 @@ import { hasRequiredScopes as hasRequiredGoogleScopes } from "../../../src/core/
 
 describe("microsoft hasRequiredScopes", () => {
   it("accepts a short-form grant", () => {
-    expect(hasRequiredMicrosoftScopes("Calendars.ReadWrite User.Read offline_access")).toBe(true);
+    expect(
+      hasRequiredMicrosoftScopes(
+        "Calendars.ReadWrite MailboxSettings.ReadWrite User.Read offline_access",
+      ),
+    ).toBe(true);
   });
 
   it("accepts a fully-qualified grant", () => {
     expect(
       hasRequiredMicrosoftScopes(
-        "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access",
+        "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/MailboxSettings.ReadWrite https://graph.microsoft.com/User.Read offline_access",
       ),
     ).toBe(true);
   });
 
   it("accepts a fully-qualified grant regardless of casing", () => {
     expect(
-      hasRequiredMicrosoftScopes("https://graph.microsoft.com/calendars.readwrite offline_access"),
+      hasRequiredMicrosoftScopes(
+        "https://graph.microsoft.com/calendars.readwrite https://graph.microsoft.com/mailboxsettings.readwrite offline_access",
+      ),
     ).toBe(true);
+  });
+
+  it("rejects a calendar grant that is missing mailbox settings", () => {
+    expect(hasRequiredMicrosoftScopes("Calendars.ReadWrite User.Read offline_access")).toBe(false);
   });
 
   it("rejects a read-only grant in short form", () => {

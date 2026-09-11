@@ -396,6 +396,30 @@ describe("createOutlookSyncProvider", () => {
     expect(events.map((event) => event.uid)).toEqual(["titled-uid", "untitled-uid"]);
   });
 
+  it("ensures the mailbox master category once before pushing colored events", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ value: [] }))
+      .mockResolvedValueOnce(Response.json({
+        color: "preset8",
+        displayName: "Work",
+        id: "category-1",
+      }))
+      .mockResolvedValueOnce(Response.json({ iCalUId: "uid-1", id: "id-1" }))
+      .mockResolvedValueOnce(Response.json({ iCalUId: "uid-2", id: "id-2" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const colored = {
+      ...createEvent(),
+      eventCategoryName: "Work",
+      eventColor: "preset8",
+    };
+    await createProvider().pushEvents([colored, { ...colored, id: "event-state-id-2" }]);
+
+    const methods = fetchMock.mock.calls.map((call) => call[1]?.method);
+    expect(methods).toEqual(["GET", "POST", "POST", "POST"]);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/me/outlook/masterCategories");
+  });
+
   it("retries a throttled event creation after the Retry-After delay and reports success", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(throttledResponse(429, "0.05"))

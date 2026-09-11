@@ -22,6 +22,8 @@ const sourcePatchBodySchema = type({
   "syncFutureRange?": syncRangeSchema,
   "markEventsAsPrivate?": "boolean",
   "hidden?": "boolean",
+  "eventColor?": "string | null",
+  "eventCategoryName?": "string | null",
   "+": "reject",
 });
 type SourcePatchBody = typeof sourcePatchBodySchema.infer;

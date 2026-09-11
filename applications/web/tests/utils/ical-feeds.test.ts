@@ -28,6 +28,8 @@ const makeSource = (overrides: Partial<CalendarSource> = {}): CalendarSource => 
   disabled: false,
   providerMissingSince: null,
   hidden: false,
+  eventColor: null,
+  eventCategoryName: null,
   ...overrides,
 });
 

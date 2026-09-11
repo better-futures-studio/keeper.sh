@@ -23,6 +23,8 @@ const listSources = async (database: KeeperDatabase, userId: string): Promise<Ke
       unavailableSince: calendarsTable.unavailableSince,
       disabled: calendarsTable.disabled,
       hidden: calendarsTable.hidden,
+      eventColor: calendarsTable.eventColor,
+      eventCategoryName: calendarsTable.eventCategoryName,
       providerMissingSince: calendarsTable.providerMissingSince,
     })
     .from(calendarsTable)

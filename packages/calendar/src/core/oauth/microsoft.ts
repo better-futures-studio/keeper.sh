@@ -8,6 +8,7 @@ const MICROSOFT_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.
 const MICROSOFT_USERINFO_URL = "https://graph.microsoft.com/v1.0/me";
 
 const MICROSOFT_CALENDAR_SCOPE = "Calendars.ReadWrite";
+const MICROSOFT_MAILBOX_SETTINGS_SCOPE = "MailboxSettings.ReadWrite";
 const MICROSOFT_USER_SCOPE = "User.Read";
 const MICROSOFT_OFFLINE_SCOPE = "offline_access";
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -83,6 +84,7 @@ const createMicrosoftOAuthService = (
     });
     const scopes = options.scopes ?? [
       MICROSOFT_CALENDAR_SCOPE,
+      MICROSOFT_MAILBOX_SETTINGS_SCOPE,
       MICROSOFT_USER_SCOPE,
       MICROSOFT_OFFLINE_SCOPE,
     ];
@@ -164,13 +166,15 @@ const normalizeGrantedScope = (scope: string): string => {
 };
 
 const hasRequiredScopes = (grantedScopes: string): boolean => {
-  const scopes = grantedScopes.split(" ").map((scope) => normalizeGrantedScope(scope));
-  return scopes.includes(MICROSOFT_CALENDAR_SCOPE.toLowerCase());
+  const scopes = new Set(grantedScopes.split(" ").map((scope) => normalizeGrantedScope(scope)));
+  return scopes.has(MICROSOFT_CALENDAR_SCOPE.toLowerCase())
+    && scopes.has(MICROSOFT_MAILBOX_SETTINGS_SCOPE.toLowerCase());
 };
 
 export {
   createMicrosoftTokenRefresher,
   MICROSOFT_CALENDAR_SCOPE,
+  MICROSOFT_MAILBOX_SETTINGS_SCOPE,
   MICROSOFT_USER_SCOPE,
   MICROSOFT_OFFLINE_SCOPE,
   createMicrosoftOAuthService,

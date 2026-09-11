@@ -72,6 +72,8 @@ function makeSource(overrides: Partial<CalendarSource> = {}): CalendarSource {
     disabled: false,
     providerMissingSince: null,
     hidden: false,
+    eventColor: null,
+    eventCategoryName: null,
     ...overrides,
   };
 }
@@ -108,6 +110,8 @@ function makeDetail(overrides: Partial<CalendarDetail> = {}): CalendarDetail {
     unavailableSince: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
+    eventColor: null,
+    eventCategoryName: null,
     ...overrides,
   };
 }

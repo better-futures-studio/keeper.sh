@@ -1,8 +1,8 @@
-import { KEEPER_CATEGORY } from "@keeper.sh/constants";
 import type { OutlookEvent } from "@keeper.sh/data-schemas";
 import type { MaterializedSyncableEvent } from "../../../core/types";
 import type { OutlookDateTime } from "../types";
 import { resolveIsAllDayEvent } from "../../../core/events/all-day";
+import { buildOutlookEventCategories } from "./event-appearance";
 import {
   instantToWallTime,
   resolveTimeZone,
@@ -86,7 +86,7 @@ const serializeOutlookEvent = (event: MaterializedSyncableEvent): OutlookEvent =
     ...(location && { location }),
     ...(event.isPrivate && { sensitivity: "private" }),
     ...(recurrence && { recurrence }),
-    categories: [KEEPER_CATEGORY],
+    categories: buildOutlookEventCategories(event.eventColor, event.eventCategoryName),
     end: buildOutlookDateTime(event.endTime, eventTimeZone, isAllDay),
     isAllDay,
     showAs: getShowAs(event.availability),

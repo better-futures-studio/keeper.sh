@@ -5,12 +5,20 @@ import {
   createGoogleTokenRefresher,
   createMicrosoftTokenRefresher,
   createCoordinatedRefresher,
+  readPriorReauthenticationState,
+  recordReauthenticationDemand,
 } from "@keeper.sh/calendar";
 import { createGoogleSyncProvider } from "@keeper.sh/calendar/google";
-import { createOutlookSyncProvider } from "@keeper.sh/calendar/outlook";
+import {
+  createOutlookSyncProvider,
+} from "@keeper.sh/calendar/outlook";
+import type { OutlookMasterCategoryEnsureCache } from "@keeper.sh/calendar/outlook";
 import { createCalDAVSyncProvider } from "@keeper.sh/calendar/caldav";
 import { resolveAuthMethod } from "@keeper.sh/calendar/digest-fetch";
-import { PROVIDER_PUSH_REQUEST_TIMEOUT_MS } from "@keeper.sh/constants";
+import {
+  PROVIDER_PUSH_REQUEST_TIMEOUT_MS,
+  REAUTHENTICATION_DESTINATION_GRANT,
+} from "@keeper.sh/constants";
 import { decryptPassword } from "@keeper.sh/database";
 import {
   calendarAccountsTable,
@@ -41,6 +49,7 @@ const resolveOAuthProvider = async (
   refreshLockStore: RefreshLockStore | null,
   rateLimiter?: RedisRateLimiter,
   signal?: AbortSignal,
+  outlookMasterCategoryCache?: OutlookMasterCategoryEnsureCache,
 ): Promise<CalendarSyncProvider | null> => {
   const [oauthCred] = await database
     .select({
@@ -102,6 +111,25 @@ const resolveOAuthProvider = async (
       externalCalendarId: oauthCred.externalCalendarId,
       calendarId,
       userId,
+      masterCategoryCache: outlookMasterCategoryCache,
+      onMailboxSettingsForbidden: async () => {
+        const prior = await readPriorReauthenticationState(database, accountId);
+        await database
+          .update(calendarAccountsTable)
+          .set({
+            needsReauthentication: true,
+            reauthenticationSource: REAUTHENTICATION_DESTINATION_GRANT,
+          })
+          .where(eq(calendarAccountsTable.id, accountId));
+        recordReauthenticationDemand({
+          accountId,
+          action: "raise",
+          previous: prior?.needsReauthentication ?? null,
+          provenance: REAUTHENTICATION_DESTINATION_GRANT,
+          recordedProvenance: prior?.reauthenticationSource,
+          signal: "mailbox-settings-forbidden",
+        });
+      },
       refreshAccessToken: createCoordinatedRefresher({
         database,
         oauthCredentialId: oauthCred.oauthCredentialId,
@@ -171,6 +199,7 @@ interface ResolveProviderOptions {
   rateLimiter?: RedisRateLimiter;
   safeFetchOptions?: SafeFetchOptions;
   signal?: AbortSignal;
+  outlookMasterCategoryCache?: OutlookMasterCategoryEnsureCache;
 }
 
 const resolveSyncProvider = (options: ResolveProviderOptions): Promise<CalendarSyncProvider | null> => {
@@ -185,6 +214,7 @@ const resolveSyncProvider = (options: ResolveProviderOptions): Promise<CalendarS
       options.refreshLockStore ?? null,
       options.rateLimiter,
       options.signal,
+      options.outlookMasterCategoryCache,
     );
   }
 

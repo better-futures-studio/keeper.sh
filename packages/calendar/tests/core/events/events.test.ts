@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyDestinationEventAppearance,
   isEventInDestinationReconciliationWindow,
   shouldExcludeSyncEvent,
 } from "../../../src/core/events/events";
+import type { MaterializedSyncableEvent } from "../../../src/core/types";
 
 const createEvent = (overrides: Partial<{
   excludeAllDayEvents: boolean;
@@ -140,5 +142,36 @@ describe("destination reconciliation source selection", () => {
 
     expect(source).toContain("getMappedSourceCalendarIds");
     expect(source).not.toContain("unavailableSince");
+  });
+});
+
+describe("applyDestinationEventAppearance", () => {
+  const event: MaterializedSyncableEvent = {
+    calendarId: "source-calendar-id",
+    calendarName: "Source",
+    calendarUrl: null,
+    endTime: new Date("2026-03-08T15:00:00.000Z"),
+    id: "event-state-id-1",
+    sourceEventUid: "source-event-uid-1",
+    startTime: new Date("2026-03-08T14:00:00.000Z"),
+    summary: "Weekly sync",
+  };
+
+  it("leaves events unchanged when the destination has no color settings", () => {
+    expect(applyDestinationEventAppearance([event], {
+      eventCategoryName: null,
+      eventColor: null,
+    })).toEqual([event]);
+  });
+
+  it("stamps the destination color and category onto every event", () => {
+    expect(applyDestinationEventAppearance([event], {
+      eventCategoryName: "Work",
+      eventColor: "preset8",
+    })).toEqual([{
+      ...event,
+      eventCategoryName: "Work",
+      eventColor: "preset8",
+    }]);
   });
 });

@@ -8,6 +8,8 @@ type SyncableEventContent = Pick<SyncableEvent, "summary" | "description" | "loc
     | "availability"
     | "isAllDay"
     | "isPrivate"
+    | "eventColor"
+    | "eventCategoryName"
     | "startTime"
     | "endTime"
     | "startTimeZone"
@@ -40,6 +42,17 @@ const resolveHashedPrivacy = (isPrivate?: boolean): string[] => {
   return [];
 };
 
+const resolveHashedDestinationAppearance = (event: SyncableEventContent): string[] => {
+  const appearance: string[] = [];
+  if (event.eventColor) {
+    appearance.push(event.eventColor);
+  }
+  if (event.eventCategoryName) {
+    appearance.push(event.eventCategoryName);
+  }
+  return appearance;
+};
+
 const createSyncEventContentHash = (event: SyncableEventContent): string => {
   const payload = JSON.stringify([
     normalizeText(event.summary),
@@ -55,6 +68,7 @@ const createSyncEventContentHash = (event: SyncableEventContent): string => {
     [...event.exceptionDates ?? []].map((date) => date.toISOString()).toSorted(),
     event.recurrenceId?.toISOString() ?? "",
     ...resolveHashedPrivacy(event.isPrivate),
+    ...resolveHashedDestinationAppearance(event),
   ]);
 
   return new Bun.CryptoHasher("sha256").update(payload).digest("hex");

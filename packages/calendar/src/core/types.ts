@@ -63,6 +63,8 @@ interface SyncableEvent {
   description?: string;
   location?: string;
   isPrivate?: boolean;
+  eventColor?: string;
+  eventCategoryName?: string;
   calendarId: string;
   calendarName: string | null;
   calendarUrl: string | null;

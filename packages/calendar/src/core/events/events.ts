@@ -36,6 +36,11 @@ interface DestinationEventReadResult {
   events: MaterializedSyncableEvent[];
 }
 
+interface DestinationEventAppearance {
+  eventColor: string | null;
+  eventCategoryName: string | null;
+}
+
 const EMPTY_DESTINATION_EVENT_READ_DIAGNOSTICS: DestinationEventReadDiagnostics = {
   candidateEventStateCount: 0,
   emptyTimeRangeCount: 0,
@@ -166,10 +171,32 @@ const getMappedSourceCalendarIds = async (
   return mappings.map((mapping) => mapping.sourceCalendarId);
 };
 
+const applyDestinationEventAppearance = (
+  events: MaterializedSyncableEvent[],
+  appearance?: DestinationEventAppearance | null,
+): MaterializedSyncableEvent[] => {
+  if (!appearance) {
+    return events;
+  }
+
+  const eventColor = orAbsent(appearance.eventColor);
+  const eventCategoryName = orAbsent(appearance.eventCategoryName);
+  if (!eventColor && !eventCategoryName) {
+    return events;
+  }
+
+  return events.map((event) => ({
+    ...event,
+    ...(eventColor && { eventColor }),
+    ...(eventCategoryName && { eventCategoryName }),
+  }));
+};
+
 const getEventsForCalendarsWithDiagnostics = async (
   database: BunSQLClient,
   calendarIds: string[],
   syncWindow: SyncWindow,
+  destinationAppearance?: DestinationEventAppearance | null,
 ): Promise<DestinationEventReadResult> => {
   if (calendarIds.length === EMPTY_SOURCES_COUNT) {
     return {
@@ -318,7 +345,7 @@ const getEventsForCalendarsWithDiagnostics = async (
       overBudgetSourceEventUids,
       syncableEventCount: syncableEvents.length,
     },
-    events,
+    events: applyDestinationEventAppearance(events, destinationAppearance),
   };
 };
 
@@ -329,6 +356,22 @@ const getEventsForCalendars = async (
 ): Promise<MaterializedSyncableEvent[]> => {
   const result = await getEventsForCalendarsWithDiagnostics(database, calendarIds, syncWindow);
   return result.events;
+};
+
+const getDestinationEventAppearance = async (
+  database: BunSQLClient,
+  destinationCalendarId: string,
+): Promise<DestinationEventAppearance | null> => {
+  const [destination] = await database
+    .select({
+      eventCategoryName: calendarsTable.eventCategoryName,
+      eventColor: calendarsTable.eventColor,
+    })
+    .from(calendarsTable)
+    .where(eq(calendarsTable.id, destinationCalendarId))
+    .limit(1);
+
+  return destination ?? null;
 };
 
 const getEventsForDestination = async (
@@ -342,10 +385,17 @@ const getEventsForDestination = async (
     return [];
   }
 
-  return getEventsForCalendars(database, sourceCalendarIds, syncWindow);
+  const result = await getEventsForCalendarsWithDiagnostics(
+    database,
+    sourceCalendarIds,
+    syncWindow,
+    await getDestinationEventAppearance(database, destinationCalendarId),
+  );
+  return result.events;
 };
 
 export {
+  applyDestinationEventAppearance,
   getEventsForCalendars,
   getEventsForCalendarsWithDiagnostics,
   getEventsForDestination,
@@ -353,4 +403,8 @@ export {
   isEventInDestinationReconciliationWindow,
   shouldExcludeSyncEvent,
 };
-export type { DestinationEventReadDiagnostics, DestinationEventReadResult };
+export type {
+  DestinationEventAppearance,
+  DestinationEventReadDiagnostics,
+  DestinationEventReadResult,
+};

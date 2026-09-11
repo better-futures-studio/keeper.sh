@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { KEEPER_CATEGORY } from "@keeper.sh/constants";
 import { serializeOutlookEvent } from "../../../../src/providers/outlook/destination/serialize-event";
 
 describe("serializeOutlookEvent", () => {
@@ -67,6 +68,57 @@ describe("serializeOutlookEvent", () => {
       dateTime: "2026-07-17T10:00:00.000",
       timeZone: "America/Edmonton",
     });
+  });
+
+  it("keeps only the Keeper marker when the destination has no event color", () => {
+    const event = serializeOutlookEvent({
+      calendarId: "calendar-id",
+      calendarName: "Calendar",
+      calendarUrl: null,
+      endTime: new Date("2026-03-09T17:00:00.000Z"),
+      id: "event-id",
+      sourceEventUid: "source-uid",
+      startTime: new Date("2026-03-09T16:00:00.000Z"),
+      startTimeZone: "UTC",
+      summary: "Doctor appointment",
+    });
+
+    expect(event.categories).toEqual([KEEPER_CATEGORY]);
+  });
+
+  it("puts the color category first so Outlook colors by it", () => {
+    const event = serializeOutlookEvent({
+      calendarId: "calendar-id",
+      calendarName: "Calendar",
+      calendarUrl: null,
+      endTime: new Date("2026-03-09T17:00:00.000Z"),
+      eventCategoryName: "Work blocks",
+      eventColor: "preset8",
+      id: "event-id",
+      sourceEventUid: "source-uid",
+      startTime: new Date("2026-03-09T16:00:00.000Z"),
+      startTimeZone: "UTC",
+      summary: "Doctor appointment",
+    });
+
+    expect(event.categories).toEqual(["Work blocks", KEEPER_CATEGORY]);
+  });
+
+  it("defaults the color category name to Keeper", () => {
+    const event = serializeOutlookEvent({
+      calendarId: "calendar-id",
+      calendarName: "Calendar",
+      calendarUrl: null,
+      endTime: new Date("2026-03-09T17:00:00.000Z"),
+      eventColor: "preset2",
+      id: "event-id",
+      sourceEventUid: "source-uid",
+      startTime: new Date("2026-03-09T16:00:00.000Z"),
+      startTimeZone: "UTC",
+      summary: "Doctor appointment",
+    });
+
+    expect(event.categories).toEqual(["Keeper", KEEPER_CATEGORY]);
   });
 
   it("sets sensitivity to private when isPrivate is true", () => {

@@ -1,7 +1,12 @@
+import { HTTP_STATUS } from "@keeper.sh/constants";
 import type { SourcePatchBody } from "@/utils/request-body";
 import { sourcePatchBodySchema } from "@/utils/request-body";
 import { idParamSchema } from "@/utils/request-query";
 import { ErrorResponse } from "@/utils/responses";
+import {
+  normalizeEventCategoryName,
+  validateDestinationEventAppearance,
+} from "@/utils/destination-event-color";
 
 const EVENT_FILTER_FIELDS = [
   "excludeAllDayEvents",
@@ -46,6 +51,7 @@ interface PatchSourceDependencies {
     updates: Record<string, SourceUpdateValue>,
   ) => Promise<Record<string, unknown> | null>;
   canUseEventFilters: (userId: string) => Promise<boolean>;
+  getSourceProvider?: (userId: string, sourceCalendarId: string) => Promise<string | null>;
 }
 
 const buildSourceUpdates = (
@@ -70,6 +76,13 @@ const buildSourceUpdates = (
     if (typeof body[field] === "boolean") {
       updates[field] = body[field];
     }
+  }
+
+  if ("eventColor" in body) {
+    updates.eventColor = body.eventColor ?? null;
+  }
+  if ("eventCategoryName" in body) {
+    updates.eventCategoryName = normalizeEventCategoryName(body.eventCategoryName ?? null);
   }
 
   return updates;
@@ -106,6 +119,19 @@ const handlePatchSourceRoute = async (
     const allowed = await dependencies.canUseEventFilters(context.userId);
     if (!allowed) {
       return ErrorResponse.forbidden("This setting requires a Pro plan.").toResponse();
+    }
+  }
+
+  const hasEventAppearanceUpdates = "eventColor" in parsedBody
+    || "eventCategoryName" in parsedBody;
+  if (hasEventAppearanceUpdates) {
+    const provider = await dependencies.getSourceProvider?.(context.userId, resolvedId.id);
+    if (!provider) {
+      return ErrorResponse.notFound().toResponse();
+    }
+    const appearanceFailure = validateDestinationEventAppearance(provider, parsedBody);
+    if (appearanceFailure) {
+      return Response.json({ message: appearanceFailure.message }, { status: HTTP_STATUS.BAD_REQUEST });
     }
   }
 

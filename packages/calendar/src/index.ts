@@ -42,6 +42,8 @@ export {
 export { isOAuthReauthRequiredError } from "./core/oauth/error-classification";
 export {
   buildReauthenticationDemandFields,
+  readPriorReauthenticationState,
+  recordReauthenticationDemand,
   resolveReauthenticationDemandAction,
   type ReauthenticationDemandAction,
   type ReauthenticationDemandFields,
@@ -170,11 +172,13 @@ export {
   mergeAbortSignals,
 } from "./core/utils/fetch-with-timeout";
 export {
+  applyDestinationEventAppearance,
   getEventsForCalendars,
   getEventsForCalendarsWithDiagnostics,
   getEventsForDestination,
   getMappedSourceCalendarIds,
   shouldExcludeSyncEvent,
+  type DestinationEventAppearance,
   type DestinationEventReadDiagnostics,
   type DestinationEventReadResult,
 } from "./core/events/events";

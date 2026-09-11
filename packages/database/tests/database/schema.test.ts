@@ -48,6 +48,19 @@ describe("calendar schema", () => {
     expect(defaults.markEventsAsPrivate).toBe(true);
   });
 
+  it("stores destination event color and Outlook category name as nullable text", () => {
+    const tableConfig = getTableConfig(calendarsTable);
+    const eventColor = tableConfig.columns.find((column) => column.name === "eventColor");
+    const eventCategoryName = tableConfig.columns.find(
+      (column) => column.name === "eventCategoryName",
+    );
+
+    expect(eventColor?.notNull).toBe(false);
+    expect(eventColor?.hasDefault).toBe(false);
+    expect(eventCategoryName?.notNull).toBe(false);
+    expect(eventCategoryName?.hasDefault).toBe(false);
+  });
+
   it("hides nothing until the user deselects a calendar", () => {
     const tableConfig = getTableConfig(calendarsTable);
     const hidden = tableConfig.columns.find((column) => column.name === "hidden");

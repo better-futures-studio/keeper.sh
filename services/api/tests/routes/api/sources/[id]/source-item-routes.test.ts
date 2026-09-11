@@ -205,6 +205,135 @@ describe("handlePatchSourceRoute", () => {
     expect(receivedUpdates).toEqual({ hidden: false });
   });
 
+  it("returns 400 when event color is set on an unsupported provider", async () => {
+    const response = await handlePatchSourceRoute(
+      {
+        body: { eventColor: "7" },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(true),
+        getSourceProvider: () => Promise.resolve("caldav"),
+        updateSource: () => Promise.resolve({ id: "source-1" }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(await readJson(response)).toEqual({
+      message: "Event color is not supported for this calendar",
+    });
+  });
+
+  it("returns 400 when Google receives an Outlook preset color", async () => {
+    const response = await handlePatchSourceRoute(
+      {
+        body: { eventColor: "preset8" },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(true),
+        getSourceProvider: () => Promise.resolve("google"),
+        updateSource: () => Promise.resolve({ id: "source-1" }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(await readJson(response)).toEqual({
+      message: "Invalid event color for this calendar",
+    });
+  });
+
+  it("returns 400 when Outlook receives a category name on another provider", async () => {
+    const response = await handlePatchSourceRoute(
+      {
+        body: { eventCategoryName: "Work" },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(true),
+        getSourceProvider: () => Promise.resolve("google"),
+        updateSource: () => Promise.resolve({ id: "source-1" }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(await readJson(response)).toEqual({
+      message: "Event color is not supported for this calendar",
+    });
+  });
+
+  it("passes a Google event color through without a Pro gate", async () => {
+    let receivedUpdates: Record<string, unknown> = {};
+    const response = await handlePatchSourceRoute(
+      {
+        body: { eventColor: "7" },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(false),
+        getSourceProvider: () => Promise.resolve("google"),
+        updateSource: (_userId, _sourceId, updates) => {
+          receivedUpdates = updates;
+          return Promise.resolve({ id: "source-1", ...updates });
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(receivedUpdates).toEqual({ eventColor: "7" });
+  });
+
+  it("trims and persists an Outlook category name", async () => {
+    let receivedUpdates: Record<string, unknown> = {};
+    const response = await handlePatchSourceRoute(
+      {
+        body: { eventCategoryName: "  Work blocks  ", eventColor: "preset8" },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(false),
+        getSourceProvider: () => Promise.resolve("outlook"),
+        updateSource: (_userId, _sourceId, updates) => {
+          receivedUpdates = updates;
+          return Promise.resolve({ id: "source-1", ...updates });
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(receivedUpdates).toEqual({
+      eventCategoryName: "Work blocks",
+      eventColor: "preset8",
+    });
+  });
+
+  it("clears event color when null is sent", async () => {
+    let receivedUpdates: Record<string, unknown> = {};
+    const response = await handlePatchSourceRoute(
+      {
+        body: { eventColor: null },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(false),
+        getSourceProvider: () => Promise.resolve("outlook"),
+        updateSource: (_userId, _sourceId, updates) => {
+          receivedUpdates = updates;
+          return Promise.resolve({ id: "source-1", ...updates });
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(receivedUpdates).toEqual({ eventColor: null });
+  });
+
   it("returns updated source when pro user sets markEventsAsPrivate", async () => {
     const response = await handlePatchSourceRoute(
       {

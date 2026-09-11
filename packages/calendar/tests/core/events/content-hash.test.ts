@@ -138,6 +138,24 @@ describe("createSyncEventContentHash", () => {
     expect(weekly).not.toBe(excluded);
   });
 
+  it("returns different hashes when the destination event color changes", () => {
+    const event = { summary: "Meeting" };
+
+    expect(createSyncEventContentHash({ ...event, eventColor: "7" }))
+      .not.toBe(createSyncEventContentHash(event));
+    expect(createSyncEventContentHash({ ...event, eventColor: "7" }))
+      .not.toBe(createSyncEventContentHash({ ...event, eventColor: "3" }));
+  });
+
+  it("returns different hashes when the Outlook category name changes", () => {
+    const event = { eventColor: "preset8", summary: "Meeting" };
+
+    expect(createSyncEventContentHash({ ...event, eventCategoryName: "Work" }))
+      .not.toBe(createSyncEventContentHash(event));
+    expect(createSyncEventContentHash({ ...event, eventCategoryName: "Work" }))
+      .not.toBe(createSyncEventContentHash({ ...event, eventCategoryName: "Personal" }));
+  });
+
   it("ignores exception-date ordering", () => {
     const first = new Date("2026-03-14T09:00:00.000Z");
     const second = new Date("2026-03-21T09:00:00.000Z");

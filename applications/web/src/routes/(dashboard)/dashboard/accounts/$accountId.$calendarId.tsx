@@ -1,4 +1,4 @@
-import { use, useEffect, useMemo, useState, useTransition } from "react";
+import { use, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import useSWR, { preload, useSWRConfig } from "swr";
 import CheckIcon from "lucide-react/dist/esm/icons/check";
@@ -22,6 +22,8 @@ import { invalidateAccountsAndSources } from "@/lib/swr";
 import { formatDate } from "@/lib/time";
 import { resolveErrorMessage } from "@/utils/errors";
 import { canPull, canPush } from "@/utils/calendars";
+import { cn } from "@/utils/cn";
+import { Input } from "@/components/ui/primitives/input";
 import type { CalendarAccount, CalendarDetail, CalendarSource } from "@/types/api";
 import {
   NavigationMenu,
@@ -59,6 +61,8 @@ import {
   calendarProviderMissingSinceAtom,
   calendarTypeAtom,
   customEventNameAtom,
+  eventCategoryNameAtom,
+  eventColorAtom,
   excludeEventNameAtom,
   excludeFieldAtoms,
   treatFullDayTimedEventsAsAllDayAtom,
@@ -102,6 +106,54 @@ const PROVIDER_EXCLUSION_SETTINGS: SyncSetting[] = [
 ];
 
 const PROVIDERS_WITH_EXTRA_SETTINGS = new Set(["google"]);
+
+interface EventColorOption {
+  value: string;
+  name: string;
+  hex: string;
+}
+
+const GOOGLE_EVENT_COLORS: EventColorOption[] = [
+  { value: "1", name: "Lavender", hex: "#7986cb" },
+  { value: "2", name: "Sage", hex: "#33b679" },
+  { value: "3", name: "Grape", hex: "#8e24aa" },
+  { value: "4", name: "Flamingo", hex: "#e67c73" },
+  { value: "5", name: "Banana", hex: "#f6bf26" },
+  { value: "6", name: "Tangerine", hex: "#f4511e" },
+  { value: "7", name: "Peacock", hex: "#039be5" },
+  { value: "8", name: "Graphite", hex: "#616161" },
+  { value: "9", name: "Blueberry", hex: "#3f51b5" },
+  { value: "10", name: "Basil", hex: "#0b8043" },
+  { value: "11", name: "Tomato", hex: "#d50000" },
+];
+
+const OUTLOOK_EVENT_COLORS: EventColorOption[] = [
+  { value: "preset0", name: "Red", hex: "#e74856" },
+  { value: "preset1", name: "Orange", hex: "#ff8c00" },
+  { value: "preset2", name: "Peach", hex: "#ffab45" },
+  { value: "preset3", name: "Yellow", hex: "#fff100" },
+  { value: "preset4", name: "Green", hex: "#47d041" },
+  { value: "preset5", name: "Teal", hex: "#30c6cc" },
+  { value: "preset6", name: "Olive", hex: "#73aa24" },
+  { value: "preset7", name: "Blue", hex: "#00bcf2" },
+  { value: "preset8", name: "Purple", hex: "#8764b8" },
+  { value: "preset9", name: "Maroon", hex: "#f495bf" },
+  { value: "preset10", name: "Steel", hex: "#a0aeb2" },
+  { value: "preset11", name: "Dark Steel", hex: "#004b60" },
+  { value: "preset12", name: "Gray", hex: "#b1adab" },
+  { value: "preset13", name: "Dark Gray", hex: "#5d5a58" },
+  { value: "preset14", name: "Black", hex: "#000000" },
+  { value: "preset15", name: "Dark Red", hex: "#750b1c" },
+  { value: "preset16", name: "Dark Orange", hex: "#ca5010" },
+  { value: "preset17", name: "Dark Peach", hex: "#ab620d" },
+  { value: "preset18", name: "Dark Yellow", hex: "#c19c00" },
+  { value: "preset19", name: "Dark Green", hex: "#004b1c" },
+  { value: "preset20", name: "Dark Teal", hex: "#004b50" },
+  { value: "preset21", name: "Dark Olive", hex: "#0b6a0b" },
+  { value: "preset22", name: "Dark Blue", hex: "#002050" },
+  { value: "preset23", name: "Dark Purple", hex: "#32145a" },
+  { value: "preset24", name: "Dark Maroon", hex: "#5c005c" },
+];
 
 function patchSource(
   store: ReturnType<typeof useStore>,
@@ -147,6 +199,7 @@ function CalendarDetailPage() {
   const { mutate: mutateCalendar } = useSWRConfig();
 
   useSeedCalendarDetail(calendarId, calendar);
+  const needsReauth = useReauthAccounts().some((entry) => entry.id === accountId);
 
   const isLoading = accountLoading || calendarLoading;
   const error = accountError || calendarError;
@@ -182,7 +235,9 @@ function CalendarDetailPage() {
           </>
         )}
         {isPushCapable && <SyncWindowSection calendarId={calendarId} />}
-        {isPullCapable && <SyncSettingsSection calendarId={calendarId} />}
+        {(isPullCapable || isPushCapable) && (
+          <SyncSettingsSection calendarId={calendarId} calendar={calendar} needsReauth={needsReauth} />
+        )}
         {isPullCapable && <ExclusionsSection calendarId={calendarId} provider={calendar.provider} />}
         <CalendarInfoSection account={account} accountId={accountId} />
         {!isPushCapable && <DeleteCalendarSection accountId={accountId} calendarId={calendarId} />}
@@ -627,35 +682,177 @@ function DestinationCheckboxIndicator({ destinationId }: { destinationId: string
   );
 }
 
-function SyncSettingsSection({ calendarId }: { calendarId: string }) {
+function SyncSettingsSection({
+  calendarId,
+  calendar,
+  needsReauth,
+}: {
+  calendarId: string;
+  calendar: CalendarDetail;
+  needsReauth: boolean;
+}) {
   const { data: entitlements } = useEntitlements();
   const locked = Boolean(entitlements && !entitlements.canUseEventFilters);
   const calendarType = useAtomValue(calendarTypeAtom);
+  const isPullCapable = canPull(calendar);
+  const isPushCapable = canPush(calendar);
 
   return (
     <>
       <DashboardSection
         title="Sync Settings"
-        description={<>Choose which event details are synced to destination calendars. Use <Text as="span" size="sm" className="text-template inline">{"{{calendar_name}}"}</Text> or <Text as="span" size="sm" className="text-template inline">{"{{event_name}}"}</Text> in text fields for dynamic values.</>}
+        description={isPullCapable ? (
+          <>Choose which event details are synced to destination calendars. Use <Text as="span" size="sm" className="text-template inline">{"{{calendar_name}}"}</Text> or <Text as="span" size="sm" className="text-template inline">{"{{event_name}}"}</Text> in text fields for dynamic values.</>
+        ) : (
+          "Choose how events synced into this calendar are colored."
+        )}
       />
-      <PremiumGate locked={locked} hint="Advanced sync settings are a Pro feature.">
-        <NavigationMenu>
-          <SyncEventNameTemplateItem calendarId={calendarId} locked={locked} />
-          <SyncEventNameToggle calendarId={calendarId} locked={locked} />
-          <ProviderSyncSettings calendarId={calendarId} calendarType={calendarType} locked={locked} />
-          {SYNC_SETTINGS.map((setting) => (
-            <ExcludeFieldToggle
-              key={setting.field}
-              calendarId={calendarId}
-              field={setting.field}
-              label={setting.label}
-              matchesField={setting.matchesField}
-              locked={locked}
-            />
-          ))}
-        </NavigationMenu>
-      </PremiumGate>
+      {isPullCapable && (
+        <PremiumGate locked={locked} hint="Advanced sync settings are a Pro feature.">
+          <NavigationMenu>
+            <SyncEventNameTemplateItem calendarId={calendarId} locked={locked} />
+            <SyncEventNameToggle calendarId={calendarId} locked={locked} />
+            <ProviderSyncSettings calendarId={calendarId} calendarType={calendarType} locked={locked} />
+            {SYNC_SETTINGS.map((setting) => (
+              <ExcludeFieldToggle
+                key={setting.field}
+                calendarId={calendarId}
+                field={setting.field}
+                label={setting.label}
+                matchesField={setting.matchesField}
+                locked={locked}
+              />
+            ))}
+          </NavigationMenu>
+        </PremiumGate>
+      )}
+      {isPushCapable && (
+        <EventColorSection calendarId={calendarId} provider={calendar.provider} needsReauth={needsReauth} />
+      )}
     </>
+  );
+}
+
+/** Google/Outlook destinations can color synced events; other providers don't support it. */
+function EventColorSection({
+  calendarId,
+  provider,
+  needsReauth,
+}: {
+  calendarId: string;
+  provider: string;
+  needsReauth: boolean;
+}) {
+  if (provider !== "google" && provider !== "outlook") return null;
+
+  const colors = provider === "google" ? GOOGLE_EVENT_COLORS : OUTLOOK_EVENT_COLORS;
+
+  return (
+    <>
+      <NavigationMenu>
+        <li className="flex flex-col gap-2 p-3.5 sm:p-3">
+          <NavigationMenuItemLabel>Event color</NavigationMenuItemLabel>
+          {provider === "outlook" && <EventCategoryNameInput calendarId={calendarId} />}
+          <EventColorSwatchRow calendarId={calendarId} colors={colors} />
+        </li>
+      </NavigationMenu>
+      {provider === "outlook" && !needsReauth && (
+        <MenuHint>
+          Outlook colors events by category. Keeper creates or updates the category in this
+          mailbox; if the account was connected before this feature, reconnect it once to grant
+          the permission.
+        </MenuHint>
+      )}
+    </>
+  );
+}
+
+function EventCategoryNameInput({ calendarId }: { calendarId: string }) {
+  const store = useStore();
+  const eventCategoryName = useAtomValue(eventCategoryNameAtom);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const commit = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    const trimmed = (inputRef.current?.value ?? "").trim();
+    const nextValue = trimmed === "" ? null : trimmed;
+    if (nextValue === eventCategoryName) return;
+
+    store.set(calendarDetailAtom, (prev) => (prev ? { ...prev, eventCategoryName: nextValue } : prev));
+    patchSource(store, calendarId, { eventCategoryName: nextValue });
+  };
+
+  return (
+    <Input
+      ref={inputRef}
+      defaultValue={eventCategoryName ?? ""}
+      placeholder="Keeper"
+      aria-label="Category name"
+      onChange={() => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(commit, 600);
+      }}
+      onBlur={commit}
+    />
+  );
+}
+
+function EventColorSwatchRow({ calendarId, colors }: { calendarId: string; colors: EventColorOption[] }) {
+  const store = useStore();
+  const selected = useAtomValue(eventColorAtom);
+
+  const selectColor = (eventColor: string | null) => {
+    if (eventColor === selected) return;
+    store.set(calendarDetailAtom, (prev) => (prev ? { ...prev, eventColor } : prev));
+    patchSource(store, calendarId, { eventColor });
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <EventColorSwatchButton selected={selected === null} label="Default" onClick={() => selectColor(null)} />
+      {colors.map((color) => (
+        <EventColorSwatchButton
+          key={color.value}
+          selected={selected === color.value}
+          label={color.name}
+          hex={color.hex}
+          onClick={() => selectColor(color.value)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function EventColorSwatchButton({
+  selected,
+  label,
+  hex,
+  onClick,
+}: {
+  selected: boolean;
+  label: string;
+  hex?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      style={hex ? { backgroundColor: hex } : undefined}
+      className={cn(
+        "size-6 shrink-0 rounded-full border border-black/10",
+        !hex && "flex items-center justify-center bg-background text-[10px] text-foreground-muted",
+        selected && "ring-2 ring-ring ring-offset-2 ring-offset-background",
+      )}
+    >
+      {!hex && "—"}
+    </button>
   );
 }
 
