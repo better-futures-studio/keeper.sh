@@ -89,6 +89,8 @@ const serializeOutlookEvent = (event: MaterializedSyncableEvent): OutlookEvent =
     categories: buildOutlookEventCategories(event.eventColor, event.eventCategoryName),
     end: buildOutlookDateTime(event.endTime, eventTimeZone, isAllDay),
     isAllDay,
+    // Mirrored busy blocks never carry reminders; the source event already has them.
+    isReminderOn: false,
     showAs: getShowAs(event.availability),
     start: buildOutlookDateTime(event.startTime, eventTimeZone, isAllDay),
     subject: event.summary,

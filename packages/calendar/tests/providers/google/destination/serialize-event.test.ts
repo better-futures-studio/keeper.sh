@@ -22,6 +22,24 @@ describe("serializeGoogleEvent", () => {
     expect(event).toBeNull();
   });
 
+  it("pushes events without reminders", () => {
+    const event = serializeGoogleEvent(
+      {
+        calendarId: "calendar-id",
+        calendarName: "Calendar",
+        calendarUrl: null,
+        endTime: new Date("2026-03-08T15:00:00.000Z"),
+        id: "event-id",
+        sourceEventUid: "source-uid",
+        startTime: new Date("2026-03-08T14:00:00.000Z"),
+        summary: "Busy",
+      },
+      "destination-uid",
+    );
+
+    expect(event?.reminders).toEqual({ useDefault: false });
+  });
+
   it("sets visibility to private when isPrivate is true", () => {
     const event = serializeGoogleEvent(
       {

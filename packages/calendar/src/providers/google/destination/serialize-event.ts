@@ -47,6 +47,8 @@ const serializeGoogleEvent = (
     end: buildDateField(normalized.endTime, isAllDay, event.startTimeZone, recurrenceRule),
     iCalUID: uid,
     location: event.location,
+    // Mirrored busy blocks never carry reminders; the source event already has them.
+    reminders: { useDefault: false },
     start: buildDateField(normalized.startTime, isAllDay, event.startTimeZone, recurrenceRule),
     summary: event.summary,
     ...(event.availability === "free" && { transparency: "transparent" }),
