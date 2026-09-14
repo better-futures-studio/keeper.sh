@@ -381,6 +381,26 @@ describe("fetchCalendarEvents", () => {
     })).resolves.toEqual({ events: [], fullSyncRequired: true });
   });
 
+  it("treats declined invitations as deletions", async () => {
+    globalThis.fetch = createFetchQueue([createJsonResponse({
+      "@odata.deltaLink": "https://graph.microsoft.com/delta?$deltatoken=next",
+      value: [
+        createOutlookEvent({ id: "declined-1", responseStatus: { response: "declined" } }),
+        createOutlookEvent({ iCalUId: "uid-2", id: "accepted-1", responseStatus: { response: "accepted" } }),
+      ],
+    })], []);
+
+    const result = await fetchCalendarEvents({
+      accessToken: "token",
+      calendarId: "calendar-id",
+      deltaLink: "https://graph.microsoft.com/delta?$deltatoken=current",
+    });
+
+    expect(result.events.map((event) => event.id)).toEqual(["accepted-1"]);
+    expect(result.cancelledEventIds).toEqual(["declined-1"]);
+    expect(parseOutlookEvents([createOutlookEvent({ responseStatus: { response: "declined" } })])).toEqual([]);
+  });
+
   it("treats isCancelled delta events as deletions", async () => {
     globalThis.fetch = createFetchQueue([createJsonResponse({
       "@odata.deltaLink": "https://graph.microsoft.com/delta?$deltatoken=next",

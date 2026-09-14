@@ -79,6 +79,13 @@ interface FullSyncRequiredResult {
   fullSyncRequired: true;
 }
 
+// A declined invitation stays on the Google calendar but is not a commitment; treat it like a cancelled event.
+const isDeclinedGoogleEvent = (event: Pick<GoogleCalendarEvent, "attendees">): boolean =>
+  event.attendees?.some((attendee) => attendee.self && attendee.responseStatus === "declined") ?? false;
+
+const isGoneGoogleEvent = (event: Pick<GoogleCalendarEvent, "status" | "attendees">): boolean =>
+  event.status === "cancelled" || isDeclinedGoogleEvent(event);
+
 const getGoogleRevisionTime = (event: GoogleCalendarEvent): number | null => {
   const value = event.updated ?? event.created;
   if (!value) {
@@ -268,7 +275,7 @@ const fetchCalendarEvents = async (options: FetchEventsOptions): Promise<FetchEv
     ...changedEventsById.values(),
   ];
   const fetchResult: FetchEventsResult = {
-    events: latestChangedEvents.filter((event) => event.status !== "cancelled"),
+    events: latestChangedEvents.filter((event) => !isGoneGoogleEvent(event)),
     fullSyncRequired: false,
     isDeltaSync,
     nextSyncToken: lastSyncToken,
@@ -282,7 +289,7 @@ const fetchCalendarEvents = async (options: FetchEventsOptions): Promise<FetchEv
       return [event.id];
     });
     fetchResult.cancelledEventIds = latestChangedEvents.flatMap((event) => {
-      if (event.status === "cancelled" && event.id) {
+      if (isGoneGoogleEvent(event) && event.id) {
         return [event.id];
       }
       return [];
@@ -370,6 +377,9 @@ const parseGoogleEventsWithDiagnostics = (
     }
     if (isKeeperEvent(event.iCalUID)) {
       selfAuthoredCount += 1;
+      continue;
+    }
+    if (isDeclinedGoogleEvent(event)) {
       continue;
     }
     result.push({

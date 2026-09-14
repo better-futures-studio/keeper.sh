@@ -35,6 +35,7 @@ interface GoogleCalendarEvent {
   updated?: string;
   eventType?: string;
   transparency?: string;
+  attendees?: { self?: boolean; responseStatus?: string }[];
   workingLocationProperties?: {
     type?: string;
     customLocation?: { label?: string };

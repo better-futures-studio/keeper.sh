@@ -85,6 +85,7 @@ const INSTANCES_SELECT = [
   "end",
   "isAllDay",
   "isCancelled",
+  "responseStatus",
   "showAs",
   "categories",
   "createdDateTime",
@@ -94,6 +95,14 @@ const INSTANCES_SELECT = [
   "seriesMasterId",
   "type",
 ].join(",");
+
+// A declined invitation is not a commitment; treat it like a removed or cancelled event.
+const isDeclinedOutlookEvent = (event: Pick<OutlookCalendarEvent, "responseStatus">): boolean =>
+  event.responseStatus?.response === "declined";
+
+const isGoneOutlookEvent = (
+  event: Pick<OutlookCalendarEvent, "@removed" | "isCancelled" | "responseStatus">,
+): boolean => Boolean(event["@removed"]) || Boolean(event.isCancelled) || isDeclinedOutlookEvent(event);
 
 const isRequestTimeoutError = (error: unknown): boolean =>
   error instanceof Error
@@ -468,7 +477,7 @@ const fetchCalendarEvents = async (options: FetchEventsOptions): Promise<FetchEv
     ({ unexpandedSeriesMasterCount } = expansion);
   }
   const result: FetchEventsResult = {
-    events: latestChangedEvents.filter((event) => !event["@removed"] && !event.isCancelled),
+    events: latestChangedEvents.filter((event) => !isGoneOutlookEvent(event)),
     fullSyncRequired: false,
     isDeltaSync,
     nextDeltaLink: lastDeltaLink,
@@ -483,7 +492,7 @@ const fetchCalendarEvents = async (options: FetchEventsOptions): Promise<FetchEv
       return [event.id];
     });
     result.cancelledEventIds = latestChangedEvents.flatMap((event) => {
-      if ((event["@removed"] || event.isCancelled) && event.id) {
+      if (isGoneOutlookEvent(event) && event.id) {
         return [event.id];
       }
       return [];
@@ -636,6 +645,9 @@ const parseOutlookEventsWithDiagnostics = (
     }
     if (event.categories?.includes(KEEPER_CATEGORY)) {
       selfAuthoredCount += 1;
+      continue;
+    }
+    if (isDeclinedOutlookEvent(event)) {
       continue;
     }
 

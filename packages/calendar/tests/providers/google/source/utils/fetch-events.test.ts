@@ -61,6 +61,32 @@ afterEach(() => {
 });
 
 describe("fetchCalendarEvents", () => {
+  it("treats invitations the user declined as cancelled", async () => {
+    const declined = createGoogleEvent({
+      attendees: [{ responseStatus: "accepted" }, { responseStatus: "declined", self: true }],
+      id: "declined-1",
+    });
+    const accepted = createGoogleEvent({
+      attendees: [{ responseStatus: "declined" }, { responseStatus: "accepted", self: true }],
+      iCalUID: "external-uid-2",
+      id: "accepted-1",
+    });
+    globalThis.fetch = createFetchQueue(
+      [createJsonResponse({ items: [declined, accepted], nextSyncToken: "sync-token" })],
+      [],
+    );
+
+    const result = await fetchCalendarEvents({
+      accessToken: "token",
+      calendarId: "calendar-id",
+      syncToken: "existing-sync-token",
+    });
+
+    expect(result.events.map((event) => event.id)).toEqual(["accepted-1"]);
+    expect(result.cancelledEventIds).toEqual(["declined-1"]);
+    expect(parseGoogleEvents([declined, accepted]).map((event) => event.sourceEventId)).toEqual(["accepted-1"]);
+  });
+
   it("collects paged events and cancelled provider IDs during delta sync", async () => {
     const requestedUrls: string[] = [];
 
