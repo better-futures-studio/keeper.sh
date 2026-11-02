@@ -11,6 +11,7 @@ import {
 import { FEED_TOKEN_PATTERN } from "../src/ical-feed-tokens";
 import { wrapQueryClient } from "../src/postgres";
 import { rotateTarget } from "../src/rotate";
+import { UNAUTHENTICATED_CALENDAR_AUTH_TYPE } from "../src/schema";
 
 const TEST_DATABASE_URL =
   process.env.AWS_MIGRATION_TEST_DATABASE_URL
@@ -72,6 +73,7 @@ const applySharedSchema = async (client: Client): Promise<FixtureIds> => {
     CREATE TABLE "user" (id text PRIMARY KEY);
     CREATE TABLE calendar_accounts (
       id uuid PRIMARY KEY,
+      "authType" text NOT NULL,
       "needsReauthentication" boolean NOT NULL DEFAULT false
     );
     CREATE TABLE calendars (id uuid PRIMARY KEY);
@@ -152,7 +154,7 @@ const applySharedSchema = async (client: Client): Promise<FixtureIds> => {
 
   await client.query(`INSERT INTO "user" (id) VALUES ($1)`, [userId]);
   await client.query(
-    `INSERT INTO calendar_accounts (id) VALUES ($1)`,
+    `INSERT INTO calendar_accounts (id, "authType") VALUES ($1, 'oauth')`,
     [accountId],
   );
   await client.query(`INSERT INTO calendars (id) VALUES ($1)`, [calendarId]);
@@ -359,6 +361,16 @@ describe.skipIf(!TEST_DATABASE_URL)("isolated Postgres rotation", () => {
       const sessions = await client.query(`SELECT count(*)::int AS count FROM session`);
       expect(sessions.rows[0]?.count).toBe(0);
 
+      const accountReauth = await client.query<{
+        authType: string;
+        reauth: boolean;
+      }>(
+        `SELECT "authType" AS "authType", "needsReauthentication" AS reauth
+         FROM calendar_accounts`,
+      );
+      expect(accountReauth.rows).toEqual([{ authType: "oauth", reauth: true }]);
+      expect(report.effects.calendarAccountsMarkedReauth).toBe(1);
+
       const after = await readFeedSnapshot(client);
       assertFeedsRotated(before, after);
       const [defaultFeedId] = ids.feedIds;
@@ -427,6 +439,118 @@ describe.skipIf(!TEST_DATABASE_URL)("isolated Postgres rotation", () => {
       expect(replayed.feeds.map((row) => row.token)).toEqual(
         after.feeds.map((row) => row.token),
       );
+    } finally {
+      await client.end();
+      await dropIsolatedDatabase(adminUrl, isolatedUrl);
+    }
+  });
+
+  it("marks oauth and caldav for reauth and leaves ICS none subscriptions working", async () => {
+    const adminUrl = TEST_DATABASE_URL as string;
+    const isolatedUrl = await createIsolatedUrl(adminUrl);
+    const client = new Client({ connectionString: isolatedUrl });
+    await client.connect();
+    try {
+      const ids = await applySharedSchema(client);
+      const caldavAccountId = randomUUID();
+      const icsAccountId = randomUUID();
+      await client.query(
+        `INSERT INTO calendar_accounts (id, "authType", "needsReauthentication")
+         VALUES ($1, 'caldav', false), ($2, $3, false)`,
+        [caldavAccountId, icsAccountId, UNAUTHENTICATED_CALENDAR_AUTH_TYPE],
+      );
+
+      const report = await rotateTarget(wrapQueryClient(client), {
+        keys: rotationKeys,
+        targetConfirmedBy: "application_name",
+      });
+      expect(report.alreadyCompleted).toBe(false);
+      expect(report.effects.calendarAccountsMarkedReauth).toBe(2);
+      expect(report.preserved.calendarAccounts).toBe(3);
+
+      const accounts = await client.query<{
+        id: string;
+        authType: string;
+        reauth: boolean;
+      }>(
+        `SELECT id::text AS id, "authType" AS "authType",
+                "needsReauthentication" AS reauth
+         FROM calendar_accounts`,
+      );
+      const byAuthType = Object.fromEntries(
+        accounts.rows.map((row) => [row.authType, row]),
+      );
+      expect(byAuthType.oauth).toEqual({
+        id: ids.accountId,
+        authType: "oauth",
+        reauth: true,
+      });
+      expect(byAuthType.caldav).toEqual({
+        id: caldavAccountId,
+        authType: "caldav",
+        reauth: true,
+      });
+      expect(byAuthType[UNAUTHENTICATED_CALENDAR_AUTH_TYPE]).toEqual({
+        id: icsAccountId,
+        authType: UNAUTHENTICATED_CALENDAR_AUTH_TYPE,
+        reauth: false,
+      });
+    } finally {
+      await client.end();
+      await dropIsolatedDatabase(adminUrl, isolatedUrl);
+    }
+  });
+
+  it("binds snake_case auth_type when that is the live calendar_accounts layout", async () => {
+    const adminUrl = TEST_DATABASE_URL as string;
+    const isolatedUrl = await createIsolatedUrl(adminUrl);
+    const client = new Client({ connectionString: isolatedUrl });
+    await client.connect();
+    try {
+      await client.query(`
+        CREATE TABLE "user" (id text PRIMARY KEY);
+        CREATE TABLE calendar_accounts (
+          id uuid PRIMARY KEY,
+          auth_type text NOT NULL,
+          needs_reauthentication boolean NOT NULL DEFAULT false
+        );
+        CREATE TABLE calendars (id uuid PRIMARY KEY);
+        CREATE TABLE event_states (id uuid PRIMARY KEY);
+        CREATE TABLE caldav_credentials (
+          id uuid PRIMARY KEY,
+          encrypted_password text NOT NULL
+        );
+      `);
+      await client.query(`INSERT INTO "user" (id) VALUES ('user-1')`);
+      const oauthId = randomUUID();
+      const icsId = randomUUID();
+      await client.query(
+        `INSERT INTO calendar_accounts (id, auth_type) VALUES ($1, 'oauth'), ($2, $3)`,
+        [oauthId, icsId, UNAUTHENTICATED_CALENDAR_AUTH_TYPE],
+      );
+      await client.query(`INSERT INTO calendars (id) VALUES ($1)`, [randomUUID()]);
+      await client.query(`INSERT INTO event_states (id) VALUES ($1)`, [randomUUID()]);
+
+      const report = await rotateTarget(wrapQueryClient(client), {
+        keys: rotationKeys,
+        targetConfirmedBy: "application_name",
+      });
+      expect(report.effects.calendarAccountsMarkedReauth).toBe(1);
+      expect(report.preserved.calendarAccounts).toBe(2);
+      const accounts = await client.query<{
+        id: string;
+        authType: string;
+        reauth: boolean;
+      }>(
+        `SELECT id::text AS id, auth_type AS "authType",
+                needs_reauthentication AS reauth
+         FROM calendar_accounts
+         ORDER BY auth_type`,
+      );
+      expect(accounts.rows).toEqual([
+        { id: icsId, authType: UNAUTHENTICATED_CALENDAR_AUTH_TYPE, reauth: false },
+        { id: oauthId, authType: "oauth", reauth: true },
+      ]);
     } finally {
       await client.end();
       await dropIsolatedDatabase(adminUrl, isolatedUrl);

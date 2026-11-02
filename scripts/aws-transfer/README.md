@@ -7,12 +7,12 @@ Production data moves inside AWS only. The driver never drops, overwrites, or re
 Build the application image first, then the transfer image. Preserve earlier immutable migration tags:
 
 ```sh
-docker build -f docker/aws/Dockerfile -t boca-keeper:a79f73d-migration4 .
+docker build -f docker/aws/Dockerfile -t boca-keeper:a79f73d-migration5 .
 docker build -f docker/aws/Migration.Dockerfile -t boca-keeper-transfer:test .
 (cd scripts/aws-transfer && bun test)
 ```
 
-`Migration.Dockerfile` copies `FROM boca-keeper:a79f73d-migration4`. Pin the final transfer image by its registry digest in the one-off ECS task. PostgreSQL 18.6, Bun 1.3.11 and AWS CLI 2.31.17 use pinned upstream digests. The supplied AWS CLI digest reports 2.31.17, despite initially being identified as 2.31.18; the Dockerfile labels the verified version.
+`Migration.Dockerfile` copies `FROM boca-keeper:a79f73d-migration5`. Pin the final transfer image by its registry digest in the one-off ECS task. PostgreSQL 18.6, Bun 1.3.11 and AWS CLI 2.31.17 use pinned upstream digests. The supplied AWS CLI digest reports 2.31.17, despite initially being identified as 2.31.18; the Dockerfile labels the verified version.
 
 The public Amazon RDS us-east-2 CA bundle is copied to `/app/certs/aws-rds-us-east-2.pem`. See [certs README](../../docker/aws/certs/README.md) for the source URL and SHA256.
 
@@ -98,3 +98,9 @@ bunx oxlint .
 ```
 
 The fixture creates a NONSUPER `bocapro_data_admin` with `CREATEDB`/`CREATEROLE`, membership in fixture `rds_superuser`, and `GRANT SET ON PARAMETER session_replication_role` issued by fixture root. It covers empty-target create-if-absent, existing empty database, rejection of existing user data and `keeper_app`, reviewed migrations against the app database only, snapshot-consistent dump/restore without `--disable-triggers`, count comparison, rotation, `keeper_app` boundaries, negative foreign-key detection, and a restricted public-only backup that excludes the receipt and restores independently.
+
+## Authenticated source TLS
+
+The source PostgreSQL certificate names `postgres.railway.internal`, rather than its public proxy. The transfer image includes its public root CA, retrieved through authenticated Railway SSH; see the [certificate record](../../docker/aws/certs/README.md). Resolve the fixed public proxy to IPv4 once per transfer. Both snapshot and dump connections route to that address and verify the internal certificate name. node-postgres receives explicit CA/servername with rejectUnauthorized=true; libpq receives PGHOSTADDR for routing and PGHOST with verify-full for identity. The operator laptop inspected public certificates only; no production dump or rows were downloaded.
+
+`source-tls-fixture.ts` runs only against synthetic PostgreSQL 18 on port 25437 with database `railway` and a fixture CA mounted at `/fixture/ca.pem`. Both node-postgres and pg_dump must succeed with the trusted name and fail with a wrong CA or name. It does not weaken the production driver's ECS/account/filesystem guards.

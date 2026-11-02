@@ -45,7 +45,7 @@ COPY --from=build /app/applications/web/dist ./applications/web/dist
 COPY --chmod=0444 docker/aws/certs/aws-rds-us-east-2.pem /app/certs/aws-rds-us-east-2.pem
 COPY --chmod=0555 docker/aws/start.sh /usr/local/bin/keeper-start
 ENV ENV=production NODE_ENV=production API_PORT=3001 PORT=3000 HOSTNAME=0.0.0.0 \
-    VITE_API_URL=http://127.0.0.1:3001 COMMERCIAL_MODE=false KEEPER_SYNC_ENABLED=false
+    VITE_API_URL=http://127.0.0.1:3001 COMMERCIAL_MODE=false KEEPER_SYNC_ENABLED=false WORKER_JOB_QUEUE_ENABLED=true
 USER 65532:65532
 EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=3 \

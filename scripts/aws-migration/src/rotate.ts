@@ -8,6 +8,7 @@ import {
   readReceipts,
 } from "./receipt";
 import {
+  UNAUTHENTICATED_CALENDAR_AUTH_TYPE,
   columnSql,
   inspectSchema,
   isResolvedTable,
@@ -129,14 +130,15 @@ const deleteAll = async (
   return result.rowCount ?? 0;
 };
 
-const updateAllTrue = async (
+const markCredentialBackedCalendarAccountsReauth = async (
   client: QueryClient,
   table: ResolvedTable,
-  drizzleName: string,
 ): Promise<number> => {
   const result = await client.query(
     `UPDATE ${tableSql(table.tableName)}
-     SET ${columnSql(table, drizzleName)} = TRUE`,
+     SET ${columnSql(table, "needsReauthentication")} = TRUE
+     WHERE ${columnSql(table, "authType")} IS DISTINCT FROM $1`,
+    [UNAUTHENTICATED_CALENDAR_AUTH_TYPE],
   );
   return result.rowCount ?? 0;
 };
@@ -319,10 +321,9 @@ const runInvalidations = async (
       client,
       schema.optional.calendar_push_channels ?? null,
     ),
-    calendarAccountsMarkedReauth: await updateAllTrue(
+    calendarAccountsMarkedReauth: await markCredentialBackedCalendarAccountsReauth(
       client,
       schema.essential.calendar_accounts,
-      "needsReauthentication",
     ),
     oauthCredentialsCleared: await clearOauthCredentials(
       client,

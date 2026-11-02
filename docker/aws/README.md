@@ -5,7 +5,7 @@ This runtime keeps the deployed Keeper application's web/API/cron/worker contrac
 Build the ARM64 application image, then the transfer image. Preserve earlier immutable migration tags.
 
 ```sh
-docker build --platform linux/arm64 -f docker/aws/Dockerfile -t boca-keeper:a79f73d-migration4 .
+docker build --platform linux/arm64 -f docker/aws/Dockerfile -t boca-keeper:a79f73d-migration5 .
 docker build --platform linux/arm64 -f docker/aws/Migration.Dockerfile -t boca-keeper-transfer:test .
 ```
 
@@ -43,6 +43,8 @@ Primary references:
 
 ## TLS and image checks
 
-The application stays on Bun1.3.11. Its SQL client does not support libpq's `sslrootcert` URL key, so the database connection helper reads the public CA, removes that key before opening Bun SQL, and supplies explicit TLS options with certificate and hostname verification. Connections without a root-certificate URL key retain their existing behavior. A local PostgreSQL18 TLS fixture verified success with its trusted CA and rejection of a wrong CA and wrong hostname on this exact Bun version. Missing or unreadable CA files fail before connecting.
+The application stays on Bun 1.3.11. Its SQL client does not support libpq's `sslrootcert` URL key, so the database connection helper reads the public CA, removes that key before opening Bun SQL, and supplies explicit TLS options with certificate and hostname verification. Connections without a root-certificate URL key retain their existing behavior. A local PostgreSQL 18 TLS fixture verified success with its trusted CA and rejection of a wrong CA and wrong hostname on this exact Bun version. Missing or unreadable CA files fail before connecting.
 
-The one-off transfer image retains PostgreSQL18.6 client tools and excludes the database server, unused gosu binary and Python wheel packaging files. November2 image scans found no critical vulnerabilities and no high-severity language-package vulnerabilities in either image. Debian packages still have high-severity advisories without published fixes (48in the application image,55in the transfer image); rescan and rebuild when fixes become available. Preserve the images' read-only, non-root execution and restricted network/IAM settings.
+The one-off transfer image retains PostgreSQL 18.6 client tools and excludes the database server, unused gosu binary and Python wheel packaging files. November 2 image scans found no critical vulnerabilities and no high-severity language-package vulnerabilities in either image. Debian packages still have high-severity advisories without published fixes (48 in the application image,55 in the transfer image); rescan and rebuild when fixes become available. Preserve the images' read-only, non-root execution and restricted network/IAM settings.
+
+Sync also requires `WORKER_JOB_QUEUE_ENABLED=true`. The image supplies that default; startup fills it when unset and refuses an explicit false or invalid value before starting any child when sync is enabled. Unauthenticated ICS subscriptions keep their reauthentication state during credential rotation; credential-backed accounts are marked for reconnection.

@@ -18,11 +18,17 @@ import type {
  */
 const ESSENTIAL_TABLES = {
   user: ["id"],
-  calendar_accounts: ["id", "needsReauthentication"],
+  calendar_accounts: ["id", "authType", "needsReauthentication"],
   calendars: ["id"],
   caldav_credentials: ["id", "encryptedPassword"],
   event_states: ["id"],
 } as const;
+
+/*
+ * ICS subscriptions use authType none and store no provider credentials.
+ * Credential-backed oauth/caldav accounts still need reauth after a copy.
+ */
+const UNAUTHENTICATED_CALENDAR_AUTH_TYPE = "none" as const;
 
 const OPTIONAL_TABLES = {
   oauth_credentials: [
@@ -188,6 +194,7 @@ export {
   OPTIONAL_TABLES,
   RECEIPT_COLUMNS,
   RECEIPT_TABLE,
+  UNAUTHENTICATED_CALENDAR_AUTH_TYPE,
   columnSql,
   inspectSchema,
   isResolvedTable,

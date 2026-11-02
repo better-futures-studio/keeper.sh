@@ -5,6 +5,7 @@ import { KEY_BYTE_LENGTH, fingerprintKey } from "../src/crypto";
 import { MigrationError } from "../src/errors";
 import { FEED_TOKEN_PATTERN } from "../src/ical-feed-tokens";
 import { rotateTarget } from "../src/rotate";
+import { UNAUTHENTICATED_CALENDAR_AUTH_TYPE } from "../src/schema";
 import {
   CAMEL_CASE_LAYOUT,
   SNAKE_CASE_LAYOUT,
@@ -76,6 +77,7 @@ describe("rotate-target transaction", () => {
     expect(report.effects.apiTokensInvalidated).toBe(2);
     expect(report.effects.oauthCredentialsCleared).toBe(2);
     expect(report.effects.accountProviderTokensCleared).toBe(2);
+    expect(report.effects.calendarAccountsMarkedReauth).toBe(2);
     expect(report.preserved.users).toBe(2);
     expect(report.preserved.eventStates).toBe(8);
     expect(report.preserved.icalFeeds).toBe(2);
@@ -118,6 +120,19 @@ describe("rotate-target transaction", () => {
     expect(
       sql.some((statement) => statement.startsWith('DELETE FROM "calendar_push_channels"')),
     ).toBe(true);
+    const calendarAccountUpdate = sql.find((statement) =>
+      statement.startsWith('UPDATE "calendar_accounts"'),
+    );
+    expect(calendarAccountUpdate).toContain('"needsReauthentication"');
+    expect(calendarAccountUpdate).toContain('"authType"');
+    expect(calendarAccountUpdate).toContain("IS DISTINCT FROM");
+    expect(calendarAccountUpdate).not.toContain('"auth_type"');
+    const calendarAccountUpdateQuery = recorded.find((entry) =>
+      entry.sql.replaceAll(/\s+/g, " ").startsWith('UPDATE "calendar_accounts"'),
+    );
+    expect(calendarAccountUpdateQuery?.values).toEqual([
+      UNAUTHENTICATED_CALENDAR_AUTH_TYPE,
+    ]);
     expect(
       sql.some(
         (statement) =>
@@ -235,6 +250,17 @@ describe("rotate-target transaction", () => {
       sql.some((statement) => statement.includes('"needs_reauthentication"')),
     ).toBe(true);
     expect(
+      sql.some((statement) => statement.includes('"auth_type"')),
+    ).toBe(true);
+    expect(
+      sql.some(
+        (statement) =>
+          statement.startsWith('UPDATE "calendar_accounts"')
+          && statement.includes('"auth_type"')
+          && statement.includes("IS DISTINCT FROM"),
+      ),
+    ).toBe(true);
+    expect(
       sql.some((statement) => statement.includes('"access_token"')),
     ).toBe(true);
     expect(
@@ -293,5 +319,65 @@ describe("rotate-target transaction", () => {
     expect(sql.some((statement) => statement.includes("calendar_push_channels"))).toBe(
       false,
     );
+  });
+
+  it("marks oauth and caldav accounts for reauth and leaves ICS none subscriptions", async () => {
+    const { client, recorded } = createMockClient({
+      columns: CAMEL_CASE_LAYOUT,
+      counts: { ...COUNTS, calendar_accounts: 3 },
+      calendarAccounts: [
+        { id: "oauth-1", authType: "oauth" },
+        { id: "caldav-1", authType: "caldav" },
+        { id: "ics-1", authType: UNAUTHENTICATED_CALENDAR_AUTH_TYPE },
+      ],
+      caldav: [{ id: "row-a", ciphertext: encryptPassword("alpha", OLD_KEY) }],
+      icalFeeds: ICAL_FEEDS,
+      receipts: [],
+    });
+
+    const report = await rotateTarget(client, {
+      keys,
+      targetConfirmedBy: "confirm-target",
+    });
+    expect(report.effects.calendarAccountsMarkedReauth).toBe(2);
+    expect(report.preserved.calendarAccounts).toBe(3);
+    const calendarAccountUpdate = recorded.find((entry) =>
+      entry.sql.replaceAll(/\s+/g, " ").startsWith('UPDATE "calendar_accounts"'),
+    );
+    const sql = calendarAccountUpdate?.sql.replaceAll(/\s+/g, " ") ?? "";
+    expect(sql).toContain('"authType" IS DISTINCT FROM');
+    expect(sql).toContain("WHERE");
+    expect(calendarAccountUpdate?.values).toEqual([
+      UNAUTHENTICATED_CALENDAR_AUTH_TYPE,
+    ]);
+  });
+
+  it("does not mark ICS none accounts when they are the only calendar accounts", async () => {
+    const { client, recorded } = createMockClient({
+      columns: CAMEL_CASE_LAYOUT,
+      counts: { ...COUNTS, calendar_accounts: 2 },
+      calendarAccounts: [
+        { id: "ics-1", authType: UNAUTHENTICATED_CALENDAR_AUTH_TYPE },
+        { id: "ics-2", authType: UNAUTHENTICATED_CALENDAR_AUTH_TYPE },
+      ],
+      caldav: [{ id: "row-a", ciphertext: encryptPassword("alpha", OLD_KEY) }],
+      icalFeeds: ICAL_FEEDS,
+      receipts: [],
+    });
+
+    const report = await rotateTarget(client, {
+      keys,
+      targetConfirmedBy: "confirm-target",
+    });
+    expect(report.effects.calendarAccountsMarkedReauth).toBe(0);
+    expect(report.preserved.calendarAccounts).toBe(2);
+    expect(report.effects.oauthCredentialsCleared).toBe(2);
+    expect(report.effects.sessionsInvalidated).toBe(4);
+    const calendarAccountUpdate = recorded.find((entry) =>
+      entry.sql.replaceAll(/\s+/g, " ").startsWith('UPDATE "calendar_accounts"'),
+    );
+    expect(calendarAccountUpdate?.values).toEqual([
+      UNAUTHENTICATED_CALENDAR_AUTH_TYPE,
+    ]);
   });
 });

@@ -25,7 +25,12 @@ import {
   oauthCredentialsTable,
   sourceDestinationMappingsTable,
 } from "../../../packages/database/src/database/schema";
-import { ESSENTIAL_TABLES, OPTIONAL_TABLES, resolveColumnName } from "../src/schema";
+import {
+  ESSENTIAL_TABLES,
+  OPTIONAL_TABLES,
+  UNAUTHENTICATED_CALENDAR_AUTH_TYPE,
+  resolveColumnName,
+} from "../src/schema";
 import { MigrationError } from "../src/errors";
 import { toSnakeCase } from "../src/sql";
 
@@ -39,9 +44,12 @@ describe("schema inventory", () => {
     expect(Object.keys(getTableColumns(caldavCredentialsTable))).toEqual(
       expect.arrayContaining([...ESSENTIAL_TABLES.caldav_credentials]),
     );
+    expect(ESSENTIAL_TABLES.calendar_accounts).toContain("authType");
     expect(Object.keys(getTableColumns(calendarAccountsTable))).toEqual(
       expect.arrayContaining([...ESSENTIAL_TABLES.calendar_accounts]),
     );
+    expect(getTableColumns(calendarAccountsTable).authType).toBeDefined();
+    expect(UNAUTHENTICATED_CALENDAR_AUTH_TYPE).toBe("none");
   });
 
   it("tracks optional auth, feed, mapping, and passkey tables", () => {
@@ -106,7 +114,14 @@ describe("column layout binding", () => {
         new Set(["encrypted_password"]),
       ),
     ).toBe("encrypted_password");
+    expect(toSnakeCase("authType")).toBe("auth_type");
     expect(toSnakeCase("needsReauthentication")).toBe("needs_reauthentication");
+    expect(
+      resolveColumnName("calendar_accounts", "authType", new Set(["auth_type"])),
+    ).toBe("auth_type");
+    expect(
+      resolveColumnName("calendar_accounts", "authType", new Set(["authType"])),
+    ).toBe("authType");
     expect(toSnakeCase("legacyAlias")).toBe("legacy_alias");
     expect(toSnakeCase("secretHash")).toBe("secret_hash");
   });

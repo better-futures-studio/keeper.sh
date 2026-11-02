@@ -1,9 +1,11 @@
 import { Client } from 'pg';
 import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { lookup } from 'node:dns/promises';
 import { check, targetUrl, metadataGuard, mountGuard, compareCounts } from './guards';
 import {command, aws, counts} from './core';
 import {verifyForeignKeys, verifyRdsAdmin, ensureAppDatabase, assertFreshTarget, grantRuntimeRole, verifyRuntimeRole} from './integrity';
+import { SOURCE_CA_FILE, verifiedSourceConnections } from './source-tls';
 
 let phase = 'preflight';
 const required = (key: string) => { const value = process.env[key]; check(value); return value; };
@@ -24,7 +26,8 @@ const main = async () => {
   const source = new URL(required('SOURCE_DATABASE_URL'));
   check(['postgres:', 'postgresql:'].includes(source.protocol) && source.hostname === 'turntable.proxy.rlwy.net' && source.port === '25437');
   check([...source.searchParams.keys()].every(key => ['sslmode','application_name'].includes(key)));
-  source.searchParams.set('sslmode','require');
+  const sourceAddress = await lookup(source.hostname, { family: 4 });
+  const verifiedSource = verifiedSourceConnections(source, sourceAddress.address, await readFile(SOURCE_CA_FILE, 'utf8'));
   const bucket = required('MIGRATION_BUCKET');
   // Private access and default encryption are enforced by reviewed AWS infrastructure.
   check(bucket === 'bocapro-shared-host-keeper-backup-491565008757');
@@ -34,9 +37,7 @@ const main = async () => {
   check(catalogUrl.searchParams.get('sslmode') === 'verify-full' && catalogUrl.searchParams.get('sslrootcert') === '/app/certs/aws-rds-us-east-2.pem');
   const catalog = new Client({connectionString:catalogUrl.toString()});
   const dst = new Client({connectionString:admin.toString()});
-  const sourceClientUrl = new URL(source);
-  sourceClientUrl.searchParams.delete('sslmode');
-  const src = new Client({connectionString:sourceClientUrl.toString(),ssl:{rejectUnauthorized:false}});
+  const src = new Client(verifiedSource.client);
   try {
     await catalog.connect();
     await verifyRdsAdmin(catalog,'postgres','bocapro_data_admin');
@@ -52,7 +53,7 @@ const main = async () => {
     for (const key of ['user','calendar_accounts','calendars','caldav_credentials','event_states']) {check(key in before);}
     const archive = `${work}/source.dump`;
     phase = 'dump';
-    await command(['pg_dump','--format=custom','--schema=public','--no-owner','--no-acl',`--snapshot=${snapshot}`,`--file=${archive}`], {PGDATABASE:decodeURIComponent(source.pathname.slice(1)), PGHOST:source.hostname, PGPORT:source.port, PGUSER:decodeURIComponent(source.username), PGPASSWORD:decodeURIComponent(source.password), PGSSLMODE:'require'});
+    await command(['pg_dump','--format=custom','--schema=public','--no-owner','--no-acl',`--snapshot=${snapshot}`,`--file=${archive}`], verifiedSource.dumpEnvironment);
     await chmod(archive,0o600); await src.query('COMMIT'); await src.end();
     const bytes = await readFile(archive); const sha256 = createHash('sha256').update(bytes).digest('hex');
     const prefix = `migration/${new Date().toISOString().replaceAll(':','-')}`;

@@ -10,6 +10,7 @@ interface MockDatabase {
   counts: Record<string, number>;
   caldav: { id: string; ciphertext: string }[];
   icalFeeds?: { id: string }[];
+  calendarAccounts?: { id: string; authType: string }[];
   receipts: {
     old_key_fingerprint: string;
     new_key_fingerprint: string;
@@ -24,6 +25,7 @@ interface RecordedQuery {
 const CAMEL_CASE_LAYOUT: ColumnRow[] = [
   { table_name: "user", column_name: "id" },
   { table_name: "calendar_accounts", column_name: "id" },
+  { table_name: "calendar_accounts", column_name: "authType" },
   { table_name: "calendar_accounts", column_name: "needsReauthentication" },
   { table_name: "calendars", column_name: "id" },
   { table_name: "caldav_credentials", column_name: "id" },
@@ -100,13 +102,27 @@ const tableNameFromSql = (sql: string): string => {
   return "";
 };
 
-const mutationRowCount = (sql: string, database: MockDatabase): number => {
+const mutationRowCount = (
+  sql: string,
+  database: MockDatabase,
+  values: unknown[],
+): number => {
   const tableName = tableNameFromSql(sql);
   if (
     sql.includes("WHERE")
     && (tableName === "caldav_credentials" || tableName === "ical_feeds")
   ) {
     return 1;
+  }
+  if (
+    tableName === "calendar_accounts"
+    && sql.startsWith("UPDATE")
+    && database.calendarAccounts
+  ) {
+    const excludedAuthType = String(values[0] ?? "");
+    return database.calendarAccounts.filter(
+      (account) => account.authType !== excludedAuthType,
+    ).length;
   }
   return database.counts[tableName] ?? 1;
 };
@@ -132,6 +148,7 @@ const respondInformationSchema = (
 
 const respondRows = (
   sql: string,
+  values: unknown[],
   database: MockDatabase,
 ): QueryResult<unknown> | null => {
   if (sql.includes("old_key_fingerprint") && sql.includes("SELECT")) {
@@ -151,7 +168,7 @@ const respondRows = (
     return rows([{ count: String(database.counts[tableName] ?? 0) }]);
   }
   if (sql.startsWith("UPDATE") || sql.startsWith("DELETE")) {
-    return rows([], mutationRowCount(sql, database));
+    return rows([], mutationRowCount(sql, database, values));
   }
   return null;
 };
@@ -175,7 +192,7 @@ const respond = (
   if (schemaResult) {
     return schemaResult;
   }
-  const rowResult = respondRows(sql, database);
+  const rowResult = respondRows(sql, values, database);
   if (rowResult) {
     return rowResult;
   }

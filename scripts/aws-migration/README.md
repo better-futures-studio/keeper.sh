@@ -48,7 +48,7 @@ On a confirmed target, in one transaction with an advisory lock:
 - Re-encrypt every `caldav_credentials` password with the existing `nonce:ciphertext` secretbox format from `packages/database/src/encryption.ts`. External CalDAV passwords themselves are unchanged and still need a user-side rotation. An empty table still records the receipt.
 - Regenerate every `ical_feeds.token` with `feed_` plus 32 cryptographic random bytes as hex, matching `services/api/src/utils/ical-feed-tokens.ts`. Feed ids, settings, and `ical_feed_calendars` membership rows stay. `legacyAlias` is set to false so old `/ical/:userId` URLs are rejected.
 - Delete imported `calendar_push_channels` rows (ephemeral provider registrations and `secretHash` values) so old webhook callbacks are not accepted. Calendar accounts, calendars, event mappings, source-destination mappings, and event states stay.
-- Set `needsReauthentication` on `calendar_accounts` and, when present, `oauth_credentials`.
+- Set `needsReauthentication` on credential-backed `calendar_accounts` (`authType` oauth or caldav, resolved from the live camelCase or snake_case column). Unauthenticated ICS subscriptions (`authType` none) keep their current reauth flag. When present, `oauth_credentials` are still marked.
 - Replace NOT NULL provider `accessToken` / `refreshToken` values on `oauth_credentials` with empty strings.
 - Preserve `account` rows (OAuth login links) but null `accessToken`, `refreshToken`, and `idToken`. Never touch `password` hashes.
 - Delete `session`, `verification`, `jwks`, `oauth_access_token`, `oauth_refresh_token`, and `api_tokens` when those tables exist.
