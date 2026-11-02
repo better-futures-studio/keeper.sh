@@ -1,0 +1,12 @@
+{
+  "name": "@keeper.sh/aws-migration",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "audit": "NODE_PATH=../../node_modules bun src/cli.ts audit",
+    "rotate-target": "NODE_PATH=../../node_modules bun src/cli.ts rotate-target",
+    "test": "NODE_PATH=../../node_modules bun test",
+    "types": "tsc --noEmit",
+    "lint": "oxlint ."
+  }
+}

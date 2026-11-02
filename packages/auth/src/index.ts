@@ -476,6 +476,10 @@ const createAuth = (config: AuthConfig) => {
         if (ctx.path === "/username-only/sign-up") {
           assertSignupEmailAllowed();
         }
+        // Reject the public domain policy before Better Auth masks database-hook 403s.
+        if (ctx.path === "/sign-up/email" && typeof ctx.body?.email === "string") {
+          assertSignupEmailAllowed(ctx.body.email);
+        }
         return Promise.resolve();
       }),
     },
@@ -542,7 +546,7 @@ const createAuth = (config: AuthConfig) => {
           return null;
         }
 
-        const jwt = await resourceActions.verifyAccessToken(accessToken, {
+        const jwt = await resourceActions.verifyBearerToken(accessToken, {
           jwksUrl,
           verifyOptions: {
             audience: mcpOptions.oauthProvider.validAudiences,
