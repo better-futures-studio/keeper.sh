@@ -87,7 +87,10 @@ const { auth, capabilities: authCapabilities } = createAuth({
   ...(trustedOrigins.length > MIN_TRUSTED_ORIGINS_COUNT && { trustedOrigins }),
 });
 
-const broadcastService = createBroadcastService({ redis });
+const broadcastService = createBroadcastService({
+  channel: env.REDIS_BROADCAST_CHANNEL,
+  redis,
+});
 
 const premiumService = createPremiumService({
   commercialMode: env.COMMERCIAL_MODE ?? false,

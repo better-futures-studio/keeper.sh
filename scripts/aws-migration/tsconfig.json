@@ -1,0 +1,8 @@
+{
+  "extends": "../../packages/typescript-config/tsconfig.json",
+  "include": ["src/**/*", "tests/**/*"],
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["bun"]
+  }
+}

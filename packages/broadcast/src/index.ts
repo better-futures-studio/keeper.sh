@@ -3,6 +3,7 @@ import type { BroadcastMessage } from "@keeper.sh/data-schemas";
 import { connections } from "./state";
 import type { Socket } from "./types";
 import type Redis from "ioredis";
+import { resolveBroadcastChannel } from "./channel";
 
 const EMPTY_CONNECTIONS_COUNT = 0;
 const IDLE_TIMEOUT_SECONDS = 60;
@@ -14,6 +15,7 @@ interface WebsocketHandlerOptions {
 }
 
 interface BroadcastConfig {
+  channel?: string;
   redis: Redis;
 }
 
@@ -21,8 +23,6 @@ interface BroadcastService {
   emit: (userId: string, eventName: string, data: unknown) => void;
   startSubscriber: () => Promise<void>;
 }
-
-const CHANNEL = "broadcast";
 
 const sendToUser = (userId: string, eventName: string, data: unknown): void => {
   const userConnections = connections.get(userId);
@@ -39,17 +39,18 @@ const sendToUser = (userId: string, eventName: string, data: unknown): void => {
 
 const createBroadcastService = (config: BroadcastConfig): BroadcastService => {
   const { redis } = config;
+  const channel = resolveBroadcastChannel(config.channel);
 
   const emit = (userId: string, eventName: string, data: unknown): void => {
     const message: BroadcastMessage = { data, event: eventName, userId };
-    redis.publish(CHANNEL, JSON.stringify(message));
+    redis.publish(channel, JSON.stringify(message));
   };
 
   const startSubscriber = async (): Promise<void> => {
     const subscriber = redis.duplicate();
 
-    subscriber.on("message", (channel: string, message: string) => {
-      if (channel !== CHANNEL) {
+    subscriber.on("message", (messageChannel: string, message: string) => {
+      if (messageChannel !== channel) {
         return;
       }
       const parsed = JSON.parse(message);
@@ -59,7 +60,7 @@ const createBroadcastService = (config: BroadcastConfig): BroadcastService => {
       sendToUser(parsed.userId, parsed.event, parsed.data);
     });
 
-    await subscriber.subscribe(CHANNEL);
+    await subscriber.subscribe(channel);
   };
 
   return { emit, startSubscriber };
@@ -123,6 +124,11 @@ export {
   removeConnection,
   getConnectionCount,
   createWebsocketHandler,
+  resolveBroadcastChannel,
 };
+export {
+  BROADCAST_CHANNEL_ERROR,
+  DEFAULT_BROADCAST_CHANNEL,
+} from "./channel";
 export type { BroadcastData, Socket } from "./types";
 export type { OnConnectCallback, WebsocketHandlerOptions, BroadcastConfig, BroadcastService };

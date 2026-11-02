@@ -1,4 +1,5 @@
 import arkenv from "arkenv";
+import { resolveBroadcastChannel } from "@keeper.sh/broadcast";
 
 const schema = {
   ALLOWED_SIGNUP_DOMAINS: "string?",
@@ -22,6 +23,7 @@ const schema = {
   POLAR_ACCESS_TOKEN: "string?",
   POLAR_MODE: "'sandbox' | 'production' | undefined?",
   POLAR_WEBHOOK_SECRET: "string?",
+  REDIS_BROADCAST_CHANNEL: "string?",
   REDIS_URL: "string.url",
   RESEND_API_KEY: "string?",
   SOCIAL_LOGIN_PROVIDERS: "string?",
@@ -32,5 +34,12 @@ const schema = {
   WEBSOCKET_URL: "string.url?",
 } as const;
 
+const loaded = arkenv(schema);
+
+const env = {
+  ...loaded,
+  REDIS_BROADCAST_CHANNEL: resolveBroadcastChannel(loaded.REDIS_BROADCAST_CHANNEL),
+};
+
 export { schema };
-export default arkenv(schema);
+export default env;
