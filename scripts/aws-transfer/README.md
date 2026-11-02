@@ -7,12 +7,12 @@ Production data moves inside AWS only. The driver never drops, overwrites, or re
 Build the application image first, then the transfer image. Preserve earlier immutable migration tags:
 
 ```sh
-docker build -f docker/aws/Dockerfile -t boca-keeper:a79f73d-migration5 .
+docker build -f docker/aws/Dockerfile -t boca-keeper:a79f73d-migration6 .
 docker build -f docker/aws/Migration.Dockerfile -t boca-keeper-transfer:test .
 (cd scripts/aws-transfer && bun test)
 ```
 
-`Migration.Dockerfile` copies `FROM boca-keeper:a79f73d-migration5`. Pin the final transfer image by its registry digest in the one-off ECS task. PostgreSQL 18.6, Bun 1.3.11 and AWS CLI 2.31.17 use pinned upstream digests. The supplied AWS CLI digest reports 2.31.17, despite initially being identified as 2.31.18; the Dockerfile labels the verified version.
+`Migration.Dockerfile` copies `FROM boca-keeper:a79f73d-migration6`. Pin the final transfer image by its registry digest in the one-off ECS task. PostgreSQL 18.6, Bun 1.3.11 and AWS CLI 2.31.17 use pinned upstream digests. The supplied AWS CLI digest reports 2.31.17, despite initially being identified as 2.31.18; the Dockerfile labels the verified version.
 
 The public Amazon RDS us-east-2 CA bundle is copied to `/app/certs/aws-rds-us-east-2.pem`. See [certs README](../../docker/aws/certs/README.md) for the source URL and SHA256.
 
@@ -20,7 +20,7 @@ The public Amazon RDS us-east-2 CA bundle is copied to `/app/certs/aws-rds-us-ea
 
 Run only as an ECS task in account `491565008757`, region `us-east-2`, cluster `shared-host`. Set UID/GID `65532:65532`, a read-only root filesystem and `/tmp` as a 512 MiB tmpfs with `noexec,nosuid,nodev`. Do not mount persistent storage at `/tmp`. The ECS, mount, account and target guards stay enabled; they are not relaxed for local tests.
 
-Central RDS PostgreSQL 18.6 must not set `db_name=keeper`. The driver connects `bocapro_data_admin` to built-in `/postgres` first with the same managed host and `sslmode=verify-full`, checks NONSUPER + `rds_superuser` membership + `CREATEDB` + `CREATEROLE` + `SET` on `session_replication_role` + origin, creates `keeper` only if that database is absent, then connects `keeper` and requires no user tables and no `keeper_app` role. An existing empty `keeper` database is allowed. Any user data, `keeper_app`, or other non-fresh state fails closed. Schema migrations run only against `keeper`, never against `postgres`. Other application databases and roles are not dropped, renamed, or modified. Human roles are not created here.
+Central RDS PostgreSQL 18.6 must not set `db_name=keeper`. The driver connects `bocapro_data_admin` to built-in `/postgres` first with the same managed host and `sslmode=verify-full`, checks NONSUPER + `rds_superuser` membership + `CREATEDB` + `CREATEROLE` + a working `SET LOCAL session_replication_role = replica` (RDS reports `has_parameter_privilege` false for `rds_superuser`, so the driver tries it) + origin, creates `keeper` only if that database is absent, then connects `keeper` and requires no user tables and no `keeper_app` role. An existing empty `keeper` database is allowed. Any user data, `keeper_app`, or other non-fresh state fails closed. Schema migrations run only against `keeper`, never against `postgres`. Other application databases and roles are not dropped, renamed, or modified. Human roles are not created here.
 
 RDS cannot use `pg_restore --disable-triggers`. The restore process is the only connection that sets `PGOPTIONS=-c session_replication_role=replica`. Later sessions must remain `origin`. Validated foreign keys are checked with boolean `EXISTS` probes; row payloads are not printed.
 

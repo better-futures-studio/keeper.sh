@@ -57,12 +57,18 @@ const verifyRdsAdmin = async (client: Client, database: string, username: string
     (SELECT rolcreatedb FROM pg_roles WHERE rolname=current_user) createdb,
     (SELECT rolcreaterole FROM pg_roles WHERE rolname=current_user) createrole,
     pg_has_role(current_user,'rds_superuser','MEMBER') rds_member,
-    has_parameter_privilege(current_user,'session_replication_role','SET') can_set,
     current_setting('session_replication_role') replication_mode`);
   const [info] = result.rows;
   check(info.db === database && info.usr === username && info.port === 5432);
-  check(!info.is_super && info.createdb && info.createrole && info.rds_member && info.can_set);
+  check(!info.is_super && info.createdb && info.createrole && info.rds_member);
   check(info.replication_mode === 'origin');
+  // RDS lets rds_superuser set this through its own hook, so has_parameter_privilege reports false there. Try it instead.
+  await client.query('BEGIN');
+  try {
+    await client.query('SET LOCAL session_replication_role = replica');
+    const mode = await client.query("SELECT current_setting('session_replication_role') mode");
+    check(mode.rows[0].mode === 'replica');
+  } finally { await client.query('ROLLBACK'); }
 };
 const ensureAppDatabase = async (client: Client, name: string) => {
   const ident = sqlName(name);
