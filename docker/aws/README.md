@@ -5,7 +5,7 @@ This runtime keeps the deployed Keeper application's web/API/cron/worker contrac
 Build the ARM64 application image, then the transfer image. Preserve earlier immutable migration tags.
 
 ```sh
-docker build --platform linux/arm64 -f docker/aws/Dockerfile -t boca-keeper:a79f73d-migration5 .
+docker build --platform linux/arm64 -f docker/aws/Dockerfile -t boca-keeper:a79f73d-migration6 .
 docker build --platform linux/arm64 -f docker/aws/Migration.Dockerfile -t boca-keeper-transfer:test .
 ```
 
