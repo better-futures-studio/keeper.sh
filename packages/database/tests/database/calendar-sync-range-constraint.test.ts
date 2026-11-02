@@ -1,9 +1,17 @@
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "pg";
 import { SYNC_RANGE_DEFINITIONS } from "@keeper.sh/data-schemas";
 
 const administrativeUrl = process.env.KEEPER_TEST_DATABASE_URL;
 const migrationScript = `${import.meta.dirname}/../../scripts/migrate.ts`;
+const drizzleDirectory = `${import.meta.dirname}/../../drizzle`;
+const constraintMigrationTag = "0079_hot_whizzer";
+const legacyTemplateName = `keeper_range_legacy_template_${process.pid}`;
 const templateName = `keeper_range_template_${process.pid}`;
 const scratchNames: string[] = [];
 
@@ -48,12 +56,15 @@ const runMigrations = async (databaseName: string): Promise<void> => {
   }
 };
 
-const createScratchDatabase = async (label: string): Promise<string> => {
+const createScratchDatabase = async (
+  label: string,
+  sourceTemplate = templateName,
+): Promise<string> => {
   const name = `keeper_range_${label}_${process.pid}`;
   scratchNames.push(name);
   await withAdministrativeClient(async (client) => {
     await client.query(`DROP DATABASE IF EXISTS "${name}"`);
-    await client.query(`CREATE DATABASE "${name}" TEMPLATE "${templateName}"`);
+    await client.query(`CREATE DATABASE "${name}" TEMPLATE "${sourceTemplate}"`);
   });
   return name;
 };
@@ -73,28 +84,37 @@ const readConstraint = async (
 };
 
 /*
- * Databases released before this change carry the schema without the checks.
- * Dropping them and rewinding the journal row reproduces that upgrade origin
- * exactly, rather than approximating it by replaying partial migration files.
+ * Build the actual schema and journal immediately before the named migration.
+ * Rewinding the latest journal row on a current schema replays unrelated later
+ * DDL as migrations are added, and does not represent an upgrade origin.
  */
-const rewindMigrationJournal = async (databaseName: string): Promise<void> => {
-  await withDatabaseClient(databaseName, async (client) => {
-    await client.query(`
-      DELETE FROM drizzle.__drizzle_migrations
-      WHERE id = (SELECT id FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1)
-    `);
-  });
-};
-
-const rewindToPreConstraintState = async (databaseName: string): Promise<void> => {
-  await withDatabaseClient(databaseName, async (client) => {
-    await client.query(`
-      ALTER TABLE "calendars"
-        DROP CONSTRAINT IF EXISTS "calendars_sync_ranges_check",
-        DROP CONSTRAINT IF EXISTS "calendars_ingest_coverage_check"
-    `);
-  });
-  await rewindMigrationJournal(databaseName);
+const createPreConstraintSchema = async (databaseName: string): Promise<void> => {
+  const journal = await Bun.file(`${drizzleDirectory}/meta/_journal.json`)
+    .json() as { entries: { tag: string }[] };
+  const constraintIndex = journal.entries.findIndex(({ tag }) => tag === constraintMigrationTag);
+  if (constraintIndex < 1) {
+    throw new Error(`Missing migration boundary: ${constraintMigrationTag}`);
+  }
+  const entries = journal.entries.slice(0, constraintIndex);
+  const folder = await mkdtemp(join(tmpdir(), "keeper-range-schema-"));
+  try {
+    await mkdir(join(folder, "meta"));
+    await writeFile(join(folder, "meta", "_journal.json"), JSON.stringify({ ...journal, entries }));
+    for (const entry of entries) {
+      await copyFile(`${drizzleDirectory}/${entry.tag}.sql`, join(folder, `${entry.tag}.sql`));
+    }
+    await withDatabaseClient(databaseName, async (client) => {
+      await migrate(drizzle(client), { migrationsFolder: folder });
+      const applied = await client.query<{ count: string }>(
+        `SELECT count(*)::text AS count FROM drizzle.__drizzle_migrations`,
+      );
+      expect(Number(applied.rows[0]?.count)).toBe(entries.length);
+      expect(await readConstraint(client, "calendars_sync_ranges_check")).toBeNull();
+      expect(await readConstraint(client, "calendars_ingest_coverage_check")).toBeNull();
+    });
+  } finally {
+    await rm(folder, { force: true, recursive: true });
+  }
 };
 
 const seedCalendar = async (
@@ -165,13 +185,16 @@ describe.skipIf(!administrativeUrl)("calendar sync-range check constraints", () 
     await withAdministrativeClient(async (client) => {
       await client.query(`DROP DATABASE IF EXISTS "${templateName}"`);
       await client.query(`CREATE DATABASE "${templateName}"`);
+      await client.query(`DROP DATABASE IF EXISTS "${legacyTemplateName}"`);
+      await client.query(`CREATE DATABASE "${legacyTemplateName}"`);
     });
     await runMigrations(templateName);
+    await createPreConstraintSchema(legacyTemplateName);
   }, 300_000);
 
   afterAll(async () => {
     await withAdministrativeClient(async (client) => {
-      for (const name of [...scratchNames, templateName]) {
+      for (const name of [...scratchNames, templateName, legacyTemplateName]) {
         await client.query(`DROP DATABASE IF EXISTS "${name}"`);
       }
     });
@@ -195,8 +218,7 @@ describe.skipIf(!administrativeUrl)("calendar sync-range check constraints", () 
   }, 120_000);
 
   it("upgrades a populated database without touching valid rows", async () => {
-    const databaseName = await createScratchDatabase("populated");
-    await rewindToPreConstraintState(databaseName);
+    const databaseName = await createScratchDatabase("populated", legacyTemplateName);
 
     const calendarId = await withDatabaseClient(databaseName, (client) =>
       seedCalendar(client, {
@@ -222,8 +244,7 @@ describe.skipIf(!administrativeUrl)("calendar sync-range check constraints", () 
   }, 300_000);
 
   it("normalizes invalid rows instead of failing the upgrade", async () => {
-    const databaseName = await createScratchDatabase("invalid");
-    await rewindToPreConstraintState(databaseName);
+    const databaseName = await createScratchDatabase("invalid", legacyTemplateName);
 
     const seeded = await withDatabaseClient(databaseName, async (client) => {
       const corrupt = await seedCalendar(client, {
@@ -264,8 +285,11 @@ describe.skipIf(!administrativeUrl)("calendar sync-range check constraints", () 
    * statement lands on top of them, so it has to tolerate their presence.
    */
   it("applies over constraints the migration runner already installed", async () => {
-    const databaseName = await createScratchDatabase("preinstalled");
-    await rewindMigrationJournal(databaseName);
+    const databaseName = await createScratchDatabase("preinstalled", legacyTemplateName);
+    const constraintSql = await Bun.file(`${drizzleDirectory}/${constraintMigrationTag}.sql`).text();
+    await withDatabaseClient(databaseName, async (client) => {
+      await client.query(constraintSql);
+    });
 
     const calendarId = await withDatabaseClient(databaseName, (client) =>
       seedCalendar(client, { syncFutureRange: "3_months" }));
@@ -286,8 +310,7 @@ describe.skipIf(!administrativeUrl)("calendar sync-range check constraints", () 
    * so the unrepaired form is asserted to fail rather than trusted to.
    */
   it("would have failed the upgrade without the normalizing statements", async () => {
-    const databaseName = await createScratchDatabase("unrepaired");
-    await rewindToPreConstraintState(databaseName);
+    const databaseName = await createScratchDatabase("unrepaired", legacyTemplateName);
 
     await withDatabaseClient(databaseName, async (client) => {
       await seedCalendar(client, { syncHistoricRange: "110762ms" });
