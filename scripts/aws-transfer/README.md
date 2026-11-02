@@ -1,51 +1,100 @@
 # AWS-only Keeper transfer
 
-Build from the repository root after building the reviewed application image:
+Production data moves inside AWS only. The driver never drops, overwrites, or renames an existing target database, and it never writes the Railway source. Child stdout/stderr and database error details are suppressed; failures report only a fixed phase label. No credentials are passed as process arguments.
+
+## Image
+
+Build the application image first, then the transfer image. Preserve earlier immutable migration tags:
 
 ```sh
+docker build -f docker/aws/Dockerfile -t boca-keeper:a79f73d-migration4 .
 docker build -f docker/aws/Migration.Dockerfile -t boca-keeper-transfer:test .
-(cd scripts/aws-transfer && bun run test)
+(cd scripts/aws-transfer && bun test)
 ```
 
-The app stage uses the local `boca-keeper:a79f73d-migration2` image. Pin the final transfer image by its registry digest in the one-off ECS task. PostgreSQL 18.6, Bun 1.3.11 and AWS CLI 2.31.17 use pinned upstream digests. The supplied AWS CLI digest reports 2.31.17, despite initially being identified as 2.31.18; the Dockerfile labels the verified version.
+`Migration.Dockerfile` copies `FROM boca-keeper:a79f73d-migration4`. Pin the final transfer image by its registry digest in the one-off ECS task. PostgreSQL 18.6, Bun 1.3.11 and AWS CLI 2.31.17 use pinned upstream digests. The supplied AWS CLI digest reports 2.31.17, despite initially being identified as 2.31.18; the Dockerfile labels the verified version.
 
-Run only as an ECS task in account `491565008757`, region `us-east-2`, cluster `shared-host`. Set UID/GID `65532:65532`, a read-only root filesystem and `/tmp` as a 512 MiB tmpfs with `noexec,nosuid,nodev`. Do not mount persistent storage at `/tmp`. Use the task role for private S3 access and SSM SecureString injection for these environment variables:
+The public Amazon RDS us-east-2 CA bundle is copied to `/app/certs/aws-rds-us-east-2.pem`. See [certs README](../../docker/aws/certs/README.md) for the source URL and SHA256.
 
-- `SOURCE_DATABASE_URL`: Railway source at `turntable.proxy.rlwy.net:25437`; TLS is required.
-- `OLD_ENCRYPTION_KEY`, `NEW_ENCRYPTION_KEY`: different base64 secretbox keys.
-- `TARGET_ADMIN_PASSWORD`: existing `keeper_admin` superuser password, needed to disable triggers during data restore.
-- `TARGET_APP_PASSWORD`: fresh runtime password; the role must not exist yet.
-- `TARGET_DATABASE_URL`: `keeper_app` URL with the exact injected app password, host `172.31.15.170`, port `15432`, database `keeper`.
+## Production contract
+
+Run only as an ECS task in account `491565008757`, region `us-east-2`, cluster `shared-host`. Set UID/GID `65532:65532`, a read-only root filesystem and `/tmp` as a 512 MiB tmpfs with `noexec,nosuid,nodev`. Do not mount persistent storage at `/tmp`. The ECS, mount, account and target guards stay enabled; they are not relaxed for local tests.
+
+Central RDS PostgreSQL 18.6 must not set `db_name=keeper`. The driver connects `bocapro_data_admin` to built-in `/postgres` first with the same managed host and `sslmode=verify-full`, checks NONSUPER + `rds_superuser` membership + `CREATEDB` + `CREATEROLE` + `SET` on `session_replication_role` + origin, creates `keeper` only if that database is absent, then connects `keeper` and requires no user tables and no `keeper_app` role. An existing empty `keeper` database is allowed. Any user data, `keeper_app`, or other non-fresh state fails closed. Schema migrations run only against `keeper`, never against `postgres`. Other application databases and roles are not dropped, renamed, or modified. Human roles are not created here.
+
+RDS cannot use `pg_restore --disable-triggers`. The restore process is the only connection that sets `PGOPTIONS=-c session_replication_role=replica`. Later sessions must remain `origin`. Validated foreign keys are checked with boolean `EXISTS` probes; row payloads are not printed.
+
+`keeper_app` is created `NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS` with DML and sequence rights on `keeper` only, no `public` CREATE, no `rds_iam` membership, and no operational receipt access.
+
+ECS task-role credentials plus execution-role injection supply:
+
+- `SOURCE_DATABASE_URL`: exact Railway source `turntable.proxy.rlwy.net:25437`; TLS `require`. Source is never written.
+- `TARGET_DB_HOST`: must equal the injected managed endpoint and `/^shared-data-postgres\.[a-z0-9]+\.us-east-2\.rds\.amazonaws\.com$/`.
+- `TARGET_DB_PORT`: `5432`.
+- `TARGET_DB_NAME`: `keeper`.
+- `TARGET_ADMIN_USER`: `bocapro_data_admin`.
+- `TARGET_ADMIN_PASSWORD`: ECS-injected from the RDS managed Secrets Manager secret JSON `password` field.
+- `TARGET_APP_PASSWORD`, `OLD_ENCRYPTION_KEY`, `NEW_ENCRYPTION_KEY`, and `TARGET_DATABASE_URL`: scoped SSM SecureString injection. `TARGET_DATABASE_URL` is `keeper_app` / `keeper` with the exact injected app password and `sslmode=verify-full&sslrootcert=/app/certs/aws-rds-us-east-2.pem`.
 - `MIGRATION_BUCKET`: `bocapro-shared-host-keeper-backup-491565008757`.
-- Optional `TARGET_DB_HOST`, `TARGET_DB_PORT`, `TARGET_DB_NAME` must match the fixed values above.
 
-ECS supplies its metadata endpoint and task credentials. The bucket's private-access controls are managed by the reviewed infrastructure; the runtime role needs object read/write at `migration/*`, not bucket configuration permissions. Each upload explicitly requests AES256 server-side encryption and SHA256 checksums. The archive upload is checked using HeadObject before target writes.
+The runtime role needs object read/write at `migration/*`, not bucket configuration permissions. Archives and receipts go to that private prefix with AES256 and SHA256 checksums verified by HeadObject before target writes continue past the archive upload.
 
-The driver refuses any existing user table or runtime role. It opens one read-only repeatable-read source transaction, exports its snapshot to pg_dump, and counts all public tables in that same snapshot. It creates a custom public-schema archive in tmpfs, uploads it, then runs the reviewed app migrations on the empty target. It restores only public data in one transaction, compares every source table count, rotates imported credentials using the reviewed helper, checks preserved/deleted counts, and creates the runtime role with DML and sequence rights. The runtime receives no schema CREATE privilege or access to newly created operational receipt tables.
+A failure can leave a fresh schema or restored rows on `keeper`. A rerun then fails closed and needs operator review. This transfer prepares a staging copy. A later final copy cannot overwrite it.
 
-The receipt at `migration/<UTC>/receipt.json` contains only counts, key fingerprints, rotation effects and the archive checksum/version. The archive itself contains sensitive application data and stays in private encrypted S3. Child stdout/stderr and database error details are suppressed; failures report only a fixed phase label. No credentials are passed as process arguments.
+## Local synthetic fixture
 
-A failure can leave a fresh schema or restored rows on the target. The driver never drops objects or overwrites an existing target, so a rerun fails closed and requires operator review. The source is never written. The full production driver cannot run locally because the ECS, mount and identity guards remain enabled; unit tests exercise guard rejection without production data.
+Network-none, tmpfs PostgreSQL 18.6, synthetic rows only. No AWS calls. The fixture does not import the production driver. Until parent builds image3, run against the existing transfer image2 with a read-only mount of these scripts.
 
-The image copies the pinned PostgreSQL root filesystem into a fresh final stage so it inherits no server `VOLUME` declaration. Its runtime UID also has a passwd entry for PostgreSQL client tools. Source libpq fields are supplied individually through environment variables; a URI in `PGDATABASE` alone does not set its connection host.
-
-Local integration verification uses a separate, synthetic PostgreSQL container with `--network none`, tmpfs database storage, and the transfer container sharing only that container's network namespace. `fixture.ts` uses fixed localhost fixture database names. It runs the real reviewed migrations, inserts a synthetic user, exports a snapshot, inserts another user concurrently, dumps/restores the snapshot, compares all table counts, and invokes the real rotation CLI. Target retains one user while the source has two, proving snapshot consistency. It never imports the production driver or weakens its AWS guards.
-
-This transfer prepares a staging copy. A later final copy cannot overwrite it: the no-existing-table guard deliberately rejects that operation. Final cutover needs a separately reviewed target reset or a fresh empty database and a new transfer run.
-
-Run the synthetic integration fixture after rebuilding the transfer image:
+Startup:
 
 ```sh
 docker run -d --rm --name keeper-transfer-fixture --network none \
   --tmpfs /var/lib/postgresql:rw,size=256m \
   -e POSTGRES_HOST_AUTH_METHOD=trust \
   postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
-docker exec keeper-transfer-fixture pg_isready -U postgres
-# Continue after pg_isready reports accepting connections.
+```
+
+Readiness:
+
+```sh
+until docker exec keeper-transfer-fixture pg_isready -U postgres; do sleep 1; done
+```
+
+Guards (Bun 1.3.11 in the transfer image). `--workdir /tmp` avoids the app image `bunfig.toml` test preload:
+
+```sh
+docker run --rm --network none --read-only \
+  --user 65532:65532 --workdir /tmp \
+  --tmpfs /tmp:rw,noexec,nosuid,nodev,size=512m \
+  -v "$PWD/scripts/aws-transfer:/app/scripts/aws-transfer:ro" \
+  --entrypoint bun \
+  boca-keeper-transfer:test test /app/scripts/aws-transfer/guards.test.ts
+```
+
+Fixture:
+
+```sh
 docker run --rm --network container:keeper-transfer-fixture --read-only \
-  --tmpfs /tmp:rw,noexec,nosuid,nodev,size=512m --entrypoint bun \
+  --user 65532:65532 \
+  --tmpfs /tmp:rw,noexec,nosuid,nodev,size=512m \
+  -v "$PWD/scripts/aws-transfer:/app/scripts/aws-transfer:ro" \
+  --entrypoint bun \
   boca-keeper-transfer:test /app/scripts/aws-transfer/fixture.ts
+```
+
+Cleanup:
+
+```sh
 docker stop keeper-transfer-fixture
 ```
 
-The fixture also creates a restricted login with runtime DML rights and no access to the rotation receipt. It verifies that an ordinary full database dump fails with a permission error, captures that error without printing it, and checks the production backup recipe (`--schema=public --exclude-table=public.aws_migration_key_rotation_receipt`). It rebuilds a third database with reviewed migrations, restores backup data in one transaction with triggers disabled, and compares every application table count. The receipt is absent; migration history comes from the reviewed migrations. Local trust authentication is confined to the fixture's network namespace, which has no external network interface. The transfer image still runs as UID 65532.
+After image3 exists, omit the bind mount and keep the same startup, readiness, run, and cleanup commands. The fixture still uses localhost trust inside the isolated network namespace; production guards stay in `driver.ts`.
+
+Typecheck and lint from this directory on the workspace (no image required; Bun 1.3.11 for tests):
+
+```sh
+bunx tsc --noEmit
+bunx oxlint .
+```
+
+The fixture creates a NONSUPER `bocapro_data_admin` with `CREATEDB`/`CREATEROLE`, membership in fixture `rds_superuser`, and `GRANT SET ON PARAMETER session_replication_role` issued by fixture root. It covers empty-target create-if-absent, existing empty database, rejection of existing user data and `keeper_app`, reviewed migrations against the app database only, snapshot-consistent dump/restore without `--disable-triggers`, count comparison, rotation, `keeper_app` boundaries, negative foreign-key detection, and a restricted public-only backup that excludes the receipt and restores independently.

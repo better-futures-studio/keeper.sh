@@ -2,12 +2,15 @@ const check: (ok: unknown) => asserts ok = (ok) => {
   if (!ok) { throw new Error('Transfer guard rejected configuration or state'); }
 };
 const quote = (name: string) => `"${name.replaceAll('"', '""')}"`;
-const targetUrl = (raw: string, password: string) => {
+const targetUrl = (raw: string, password: string, expectedHost: string) => {
   const url = new URL(raw);
   check(['postgres:', 'postgresql:'].includes(url.protocol));
-  check(url.hostname === '172.31.15.170' && url.port === '15432' && url.pathname === '/keeper');
+  check(/^shared-data-postgres\.[a-z0-9]+\.us-east-2\.rds\.amazonaws\.com$/.test(expectedHost));
+  check(url.hostname === expectedHost && url.port === '5432' && url.pathname === '/keeper');
+  check(url.searchParams.get('sslmode') === 'verify-full');
+  check(url.searchParams.get('sslrootcert') === '/app/certs/aws-rds-us-east-2.pem');
   check(decodeURIComponent(url.username) === 'keeper_app' && decodeURIComponent(url.password) === password);
-  check([...url.searchParams.keys()].every(key => ['sslmode', 'application_name'].includes(key)));
+  check([...url.searchParams.keys()].every(key => ['sslmode', 'sslrootcert', 'application_name'].includes(key)));
   url.searchParams.set('application_name', 'keeper-aws-staging');
   return url;
 };

@@ -1,6 +1,7 @@
 import type { SQL } from "bun";
 import { drizzle } from "drizzle-orm/bun-sql";
 import type { BunSQLDatabase } from "drizzle-orm/bun-sql";
+import { normalizeBunSqlConnection, type BunSqlTls } from "./bun-sql-tls";
 import { instrumentDatabasePool } from "./pool-telemetry";
 
 interface DatabasePoolOptions {
@@ -74,21 +75,32 @@ const waitForConnection = async (database: DatabaseInstance): Promise<void> => {
   await database.execute("SELECT 1");
 };
 
+interface BunSqlPoolConnection {
+  idleTimeout: number;
+  max: number;
+  maxLifetime: number;
+  prepare: boolean;
+  tls?: BunSqlTls;
+  url: string;
+}
+
 const createDatabase = async (url: string, options?: DatabasePoolOptions): Promise<DatabaseInstance> => {
   const maxConnections = options?.maxConnections ?? POOL_MAX_CONNECTIONS;
   const statementTimeoutMs = options?.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS;
   const idleInTransactionTimeoutMs =
     options?.idleInTransactionTimeoutMs ?? DEFAULT_IDLE_IN_TRANSACTION_TIMEOUT_MS;
-  const connectionUrl = appendServerSettings(url, statementTimeoutMs, idleInTransactionTimeoutMs);
-  const database = drizzle({
-    connection: {
-      url: connectionUrl,
-      max: maxConnections,
-      idleTimeout: POOL_IDLE_TIMEOUT_SECONDS,
-      maxLifetime: POOL_MAX_LIFETIME_SECONDS,
-      prepare: PREPARED_STATEMENTS_ENABLED,
-    },
-  });
+  const normalized = normalizeBunSqlConnection(url);
+  const connection: BunSqlPoolConnection = {
+    idleTimeout: POOL_IDLE_TIMEOUT_SECONDS,
+    max: maxConnections,
+    maxLifetime: POOL_MAX_LIFETIME_SECONDS,
+    prepare: PREPARED_STATEMENTS_ENABLED,
+    url: appendServerSettings(normalized.url, statementTimeoutMs, idleInTransactionTimeoutMs),
+  };
+  if (normalized.tls) {
+    connection.tls = normalized.tls;
+  }
+  const database = drizzle({ connection });
   instrumentDatabasePool(
     database.$client as unknown as Parameters<typeof instrumentDatabasePool>[0],
     maxConnections,

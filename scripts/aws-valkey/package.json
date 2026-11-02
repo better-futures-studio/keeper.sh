@@ -1,0 +1,10 @@
+{
+  "name": "@keeper.sh/aws-valkey",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "NODE_PATH=../../node_modules bun test",
+    "types": "tsc --noEmit",
+    "lint": "oxlint ."
+  }
+}

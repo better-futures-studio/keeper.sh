@@ -138,7 +138,10 @@ const applyDatabaseErrorFields = (error: unknown): void => {
   }
 };
 
-const broadcastService = createBroadcastService({ redis: refreshLockRedis });
+const broadcastService = createBroadcastService({
+  channel: env.REDIS_BROADCAST_CHANNEL,
+  redis: refreshLockRedis,
+});
 
 const persistSyncStatus = async (result: DestinationSyncResult, syncedAt: Date): Promise<void> => {
   await database

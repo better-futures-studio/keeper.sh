@@ -1,0 +1,136 @@
+const KEEPER_DATABASE = 1;
+const TENANT_DATABASE = 2;
+const KEEPER_CHANNEL_PATTERN = "keeper:*";
+const TENANT_CHANNEL_PATTERN = "other:*";
+const KEEPER_USERNAME = "keeper";
+const TENANT_USERNAME = "tenant2";
+const SYNTHETIC_KEEPER_PASSWORD = "synthetic-keeper-only-not-a-secret";
+const SYNTHETIC_TENANT_PASSWORD = "synthetic-tenant2-only-not-a-secret";
+
+const KEEPER_ACL_COMMANDS = [
+  "hello",
+  "auth",
+  "select",
+  "ping",
+  "quit",
+  "info",
+  "time",
+  "client|setinfo",
+  "client|setname",
+  "get",
+  "set",
+  "setex",
+  "getdel",
+  "del",
+  "unlink",
+  "exists",
+  "expire",
+  "pexpire",
+  "ttl",
+  "pttl",
+  "incr",
+  "incrby",
+  "type",
+  "hset",
+  "hget",
+  "hmget",
+  "hmset",
+  "hdel",
+  "hsetnx",
+  "hincrby",
+  "hgetall",
+  "hlen",
+  "hexists",
+  "hkeys",
+  "zadd",
+  "zrem",
+  "zscore",
+  "zrange",
+  "zrangebyscore",
+  "zrevrangebyscore",
+  "zremrangebyscore",
+  "zcard",
+  "zpopmin",
+  "bzpopmin",
+  "lpush",
+  "rpush",
+  "lpop",
+  "rpop",
+  "lrem",
+  "lindex",
+  "lrange",
+  "ltrim",
+  "llen",
+  "blpop",
+  "rpoplpush",
+  "brpoplpush",
+  "lmove",
+  "blmove",
+  "sadd",
+  "srem",
+  "scard",
+  "sismember",
+  "smembers",
+  "xadd",
+  "xread",
+  "xtrim",
+  "xrange",
+  "xlen",
+  "xdel",
+  "eval",
+  "evalsha",
+  "script|load",
+  "script|exists",
+  "publish",
+  "subscribe",
+  "unsubscribe",
+  "memory|usage",
+] as const;
+
+const aclSetuserArgs = (
+  username: string,
+  password: string,
+  database: number,
+  channelPattern: string,
+): string[] => [
+  username,
+  "reset",
+  "on",
+  `>${password}`,
+  "~*",
+  "resetchannels",
+  `&${channelPattern}`,
+  `db=${String(database)}`,
+  "-@all",
+  ...KEEPER_ACL_COMMANDS.map((command) => `+${command}`),
+];
+
+const keeperAclSetuserArgs = (): string[] =>
+  aclSetuserArgs(
+    KEEPER_USERNAME,
+    SYNTHETIC_KEEPER_PASSWORD,
+    KEEPER_DATABASE,
+    KEEPER_CHANNEL_PATTERN,
+  );
+
+const tenantAclSetuserArgs = (): string[] =>
+  aclSetuserArgs(
+    TENANT_USERNAME,
+    SYNTHETIC_TENANT_PASSWORD,
+    TENANT_DATABASE,
+    TENANT_CHANNEL_PATTERN,
+  );
+
+export {
+  KEEPER_ACL_COMMANDS,
+  KEEPER_CHANNEL_PATTERN,
+  KEEPER_DATABASE,
+  KEEPER_USERNAME,
+  SYNTHETIC_KEEPER_PASSWORD,
+  SYNTHETIC_TENANT_PASSWORD,
+  TENANT_CHANNEL_PATTERN,
+  TENANT_DATABASE,
+  TENANT_USERNAME,
+  keeperAclSetuserArgs,
+  tenantAclSetuserArgs,
+};

@@ -1,11 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import { targetUrl, metadataGuard, mountGuard, compareCounts, quote } from './guards';
 describe('transfer boundaries', () => {
-  const url = 'postgresql://keeper_app:fixture@172.31.15.170:15432/keeper';
+  const host = 'shared-data-postgres.fixture.us-east-2.rds.amazonaws.com';
+  const url = `postgresql://keeper_app:fixture@${host}:5432/keeper?sslmode=verify-full&sslrootcert=/app/certs/aws-rds-us-east-2.pem`;
   test('exact private target and injected credential', () => {
-    expect(targetUrl(url,'fixture').searchParams.get('application_name')).toBe('keeper-aws-staging');
-    for (const bad of [url.replace('172.31.15.170','127.0.0.1'),url.replace('/keeper','/postgres'),url.replace('keeper_app','keeper_admin'),`${url}?options=-csearch_path=evil`]) {expect(() => targetUrl(bad,'fixture')).toThrow();}
-    expect(() => targetUrl(url,'different')).toThrow();
+    expect(targetUrl(url,'fixture',host).searchParams.get('application_name')).toBe('keeper-aws-staging');
+    for (const bad of [url.replace(host,'127.0.0.1'),url.replace('/keeper','/postgres'),url.replace('keeper_app','keeper_admin'),`${url}&options=-csearch_path=evil`]) {expect(() => targetUrl(bad,'fixture',host)).toThrow();}
+    expect(() => targetUrl(url,'different',host)).toThrow();
+    expect(() => targetUrl(url,'fixture','evil.us-east-2.rds.amazonaws.com')).toThrow();
+    expect(() => targetUrl(url.replace('verify-full','require'),'fixture',host)).toThrow();
+    expect(() => targetUrl(url.replace('aws-rds-us-east-2.pem','evil.pem'),'fixture',host)).toThrow();
   });
   test('AWS account and cluster cannot be substituted', () => {
     metadataGuard({TaskARN:'arn:aws:ecs:us-east-2:491565008757:task/shared-host/abc',Cluster:'shared-host'});
