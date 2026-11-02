@@ -2,6 +2,7 @@ name: Check Code Standards
 
 on:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
