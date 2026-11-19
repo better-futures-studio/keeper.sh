@@ -95,9 +95,11 @@ const createMicrosoftOAuthService = (
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", scopes.join(" "));
     url.searchParams.set("response_mode", "query");
-    // A hinted reconnect targets one account, so the picker would only invite the wrong choice.
+    /* A hinted reconnect targets one account, so the picker would only invite the wrong choice.
+       No prompt is sent: prompt=consent would force the user consent screen even when a tenant
+       admin has already approved the app, and Microsoft asks for consent on its own whenever a
+       requested scope lacks it. offline_access still yields a refresh token without it. */
     if (options.loginHint) {
-      url.searchParams.set("prompt", "consent");
       url.searchParams.set("login_hint", options.loginHint);
     } else {
       url.searchParams.set("prompt", "select_account");
