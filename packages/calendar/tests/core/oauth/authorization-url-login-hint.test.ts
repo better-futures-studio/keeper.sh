@@ -89,6 +89,8 @@ describe("microsoft getAuthorizationUrl", () => {
     const { searchParams } = await buildMicrosoftUrl(LOGIN_HINT);
 
     expect(searchParams.get("login_hint")).toBe(LOGIN_HINT);
-    expect(searchParams.get("prompt")).toBe("consent");
+    // Forcing consent would bypass a tenant admin's approval of the app.
+    expect(searchParams.get("prompt")).toBeNull();
+    expect(searchParams.get("scope")?.split(" ")).toContain("offline_access");
   });
 });
